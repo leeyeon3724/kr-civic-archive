@@ -241,7 +241,7 @@ def list_segments(
             COUNCIL_SPEECH_SEGMENTS.c.department,
         )
         .order_by(
-            func.coalesce(COUNCIL_SPEECH_SEGMENTS.c.meeting_date, COUNCIL_SPEECH_SEGMENTS.c.created_at).desc(),
+            COUNCIL_SPEECH_SEGMENTS.c.meeting_date.desc().nullslast(),
             COUNCIL_SPEECH_SEGMENTS.c.id.desc(),
         )
         .limit(bindparam("limit"))

@@ -188,7 +188,7 @@ def list_minutes(
             COUNCIL_MINUTES.c.updated_at,
         )
         .order_by(
-            func.coalesce(COUNCIL_MINUTES.c.meeting_date, COUNCIL_MINUTES.c.created_at).desc(),
+            COUNCIL_MINUTES.c.meeting_date.desc().nullslast(),
             COUNCIL_MINUTES.c.id.desc(),
         )
         .limit(bindparam("limit"))

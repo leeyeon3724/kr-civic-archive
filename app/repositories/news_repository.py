@@ -151,7 +151,7 @@ def list_articles(
             NEWS_ARTICLES.c.updated_at,
         )
         .order_by(
-            func.coalesce(NEWS_ARTICLES.c.published_at, NEWS_ARTICLES.c.created_at).desc(),
+            NEWS_ARTICLES.c.published_at.desc().nullslast(),
             NEWS_ARTICLES.c.id.desc(),
         )
         .limit(bindparam("limit"))

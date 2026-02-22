@@ -22,6 +22,14 @@
   - `*_search_fts` (GIN + `to_tsvector`)
 - 필터+정렬 경로 안정화를 위해 `*_filters_date_id`, `*_date_id` 복합 btree 인덱스를 함께 사용
 
+## Index-Friendly Ordering Path
+
+- 목록 정렬은 날짜 컬럼 기준 `DESC NULLS LAST, id DESC`를 기본으로 유지합니다.
+  - `news_articles`: `published_at DESC NULLS LAST, id DESC`
+  - `council_minutes`: `meeting_date DESC NULLS LAST, id DESC`
+  - `council_speech_segments`: `meeting_date DESC NULLS LAST, id DESC`
+- `COALESCE(date, created_at)` 기반 정렬은 인덱스 활용을 저해할 수 있으므로 기본 경로에서 사용하지 않습니다.
+
 ## Endpoint Latency Budget
 
 | Scenario | Endpoint | Budget Type | Target |
