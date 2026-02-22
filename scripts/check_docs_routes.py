@@ -46,21 +46,21 @@ REQUIRED_SECURITY_COMMANDS = [
     "bandit -q -r app scripts -ll",
 ]
 REQUIRED_PR_TEMPLATE_LINES = [
-    "## Quality Metrics (docs/QUALITY_METRICS.md)",
-    "- [ ] Performance impact",
-    "- [ ] Stability impact",
-    "- [ ] Reliability impact",
-    "- [ ] Maintainability impact",
-    "- [ ] Refactoring priority rationale (P0-P3) and why now",
-    "## Policy Alignment (docs/GUARDRAILS.md)",
-    "- [ ] Security/runtime policy docs sync",
-    "- [ ] Contextual guard command set reviewed (local/PR/release/incident)",
+    "## 품질 지표 (docs/QUALITY_METRICS.md)",
+    "- [ ] 성능 영향",
+    "- [ ] 안정성 영향",
+    "- [ ] 신뢰성 영향",
+    "- [ ] 유지보수성 영향",
+    "- [ ] 리팩토링 우선순위 근거(P0-P3) 및 지금 수행하는 이유",
+    "## 정책 정합성 (docs/GUARDRAILS.md)",
+    "- [ ] 보안/런타임 정책 문서 동기화",
+    "- [ ] 문맥별 가드 명령 세트 검토 (로컬/PR/릴리스/인시던트)",
 ]
 REQUIRED_GUARDRAILS_HEADINGS = [
-    "## Local/CI Baseline",
-    "## PR Context",
-    "## Release Context",
-    "## Incident/Degraded Context",
+    "## 로컬/CI 기본선",
+    "## PR 문맥",
+    "## 릴리스 문맥",
+    "## 인시던트/강등 문맥",
 ]
 REQUIRED_GUARDRAILS_PATTERNS = [
     re.compile(r"check_commit_messages\.py"),
@@ -306,8 +306,8 @@ def check_env_example(env_example_text: str, env_doc_defaults: dict[str, str]) -
 def check_backlog_policy(backlog_text: str) -> list[str]:
     errors: list[str] = []
 
-    if "# Backlog" not in backlog_text:
-        errors.append("[docs/BACKLOG.md] Title must include `# Backlog`.")
+    if "# 백로그" not in backlog_text:
+        errors.append("[docs/BACKLOG.md] Title must include `# 백로그`.")
     if "git log" not in backlog_text:
         errors.append("[docs/BACKLOG.md] Missing policy text for completed-history tracking via `git log`.")
     if "[x]" in backlog_text.lower():

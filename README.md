@@ -1,4 +1,4 @@
-# Civic Archive API
+# 시빅 아카이브 API
 
 한국 지방의회 시민 아카이브 데이터 수집/조회 API.
 FastAPI + PostgreSQL 기반으로 뉴스, 회의록, 발언 단락 저장/검색을 제공합니다.
@@ -9,7 +9,7 @@ FastAPI + PostgreSQL 기반으로 뉴스, 회의록, 발언 단락 저장/검색
 # 1) 환경 변수 파일 준비
 cp .env.example .env
 
-# PowerShell
+# 파워셸
 Copy-Item .env.example .env
 
 # 2) 의존성 설치
@@ -18,7 +18,7 @@ pip install -r requirements-dev.txt
 # 3) DB 마이그레이션 적용 (필수)
 python scripts/bootstrap_db.py
 
-# 4) 기본 테스트 (unit/contract)
+# 4) 기본 테스트 (단위/계약)
 python -m pytest
 
 # 5) 로컬 서버 실행
@@ -91,9 +91,9 @@ RUN_INTEGRATION=1 python -m pytest -m integration
 ## E2E 테스트 (라이브 서버)
 
 ```bash
-# 로컬/수동 실행: 대상 서버 미도달 시 skip
+# 로컬/수동 실행: 대상 서버 미도달 시 건너뜀
 python -m pytest -q -m e2e --base-url http://localhost:8000
 
-# CI/강제 실행: 대상 서버 미도달 시 fail
+# CI/강제 실행: 대상 서버 미도달 시 실패
 E2E_REQUIRE_TARGET=1 python -m pytest -q -m e2e --base-url http://localhost:8000
 ```

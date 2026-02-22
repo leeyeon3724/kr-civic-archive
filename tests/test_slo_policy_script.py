@@ -17,16 +17,16 @@ def test_slo_policy_main_passes_with_minimal_valid_doc(tmp_path, capsys):
     slo_file.write_text(
         "\n".join(
             [
-                "## Scope",
-                "## SLI Definitions",
-                "## SLO Targets",
+                "## 범위",
+                "## SLI 정의",
+                "## SLO 목표",
                 "99.9%",
                 "/health/live",
                 "/health/ready",
-                "## Error Budget Policy",
-                "error budget",
-                "## Alert Policy",
-                "## Deployment Guardrails",
+                "## 오류 예산 정책",
+                "오류 예산",
+                "## 알림 정책",
+                "## 배포 가드레일",
             ]
         ),
         encoding="utf-8",

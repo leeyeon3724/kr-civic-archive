@@ -14,30 +14,30 @@ def _load_quality_metrics_module():
 def test_validate_quality_metrics_content_accepts_minimal_valid_doc():
     module = _load_quality_metrics_module()
     text = """
-## Scope
-## Performance Metrics
+## 범위
+## 성능 지표
 p95
 ingest
 throughput
 query count
-## Stability Metrics
+## 안정성 지표
 4xx
 5xx
 mttr
 rate_limit_backend
 fallback
-## Reliability Metrics
+## 신뢰성 지표
 sla
 /health/live
 /health/ready
 request_id
-## Maintainability Metrics
+## 유지보수성 지표
 policy regression
 coverage
 mypy
 check_docs_routes.py
-## Review Cadence
-## Release Gate
+## 검토 주기
+## 릴리스 게이트
 check_quality_metrics.py
 """
     assert module.validate_quality_metrics_content(text) == []
@@ -46,19 +46,19 @@ check_quality_metrics.py
 def test_validate_quality_metrics_content_rejects_missing_heading():
     module = _load_quality_metrics_module()
     errors = module.validate_quality_metrics_content("## Scope")
-    assert any("## Performance Metrics" in error for error in errors)
+    assert any("## 성능 지표" in error for error in errors)
 
 
 def test_validate_quality_metrics_content_rejects_missing_pattern():
     module = _load_quality_metrics_module()
     text = """
-## Scope
-## Performance Metrics
-## Stability Metrics
-## Reliability Metrics
-## Maintainability Metrics
-## Review Cadence
-## Release Gate
+## 범위
+## 성능 지표
+## 안정성 지표
+## 신뢰성 지표
+## 유지보수성 지표
+## 검토 주기
+## 릴리스 게이트
 """
     errors = module.validate_quality_metrics_content(text)
     assert any("p95" in error for error in errors)

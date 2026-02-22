@@ -54,7 +54,7 @@
 - 태그 푸시: `git push origin <tag>`
 - 태그 푸시 시 `.github/workflows/release-tag.yml`이 태그 형식과 `docs/CHANGELOG.md` 항목을 자동 검증합니다.
 
-## Breaking Change 표기
+## 호환성 파괴 변경(브레이킹 체인지) 표기
 
 - PR 제목 또는 본문에 `BREAKING` 명시
 - `docs/CHANGELOG.md`에 영향 범위와 마이그레이션 방법 기록

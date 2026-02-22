@@ -44,7 +44,7 @@ python scripts/check_commit_messages.py --rev-range origin/main..HEAD --mode fai
 powershell -ExecutionPolicy Bypass -File scripts/install_git_hooks.ps1
 ```
 
-## Pull Request 작성 규칙
+## PR 작성 규칙
 
 PR 본문에 아래 항목을 포함합니다.
 

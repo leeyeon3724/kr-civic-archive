@@ -11,13 +11,13 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 QUALITY_METRICS_DOC = PROJECT_ROOT / "docs" / "QUALITY_METRICS.md"
 
 REQUIRED_HEADINGS = [
-    "## Scope",
-    "## Performance Metrics",
-    "## Stability Metrics",
-    "## Reliability Metrics",
-    "## Maintainability Metrics",
-    "## Review Cadence",
-    "## Release Gate",
+    "## 범위",
+    "## 성능 지표",
+    "## 안정성 지표",
+    "## 신뢰성 지표",
+    "## 유지보수성 지표",
+    "## 검토 주기",
+    "## 릴리스 게이트",
 ]
 
 REQUIRED_PATTERNS = [

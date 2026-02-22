@@ -80,7 +80,7 @@
 
 ## 뉴스 (`/api/news`)
 
-### POST `/api/news` (Upsert)
+### POST `/api/news` (업서트)
 - 필수: `title`, `url`
 - 선택: `source`, `published_at`, `author`, `summary`, `content`, `keywords`
 - `Content-Type: application/json` 권장 (비JSON 본문은 검증 오류)
@@ -120,7 +120,7 @@
 
 ## 회의록 (`/api/minutes`)
 
-### POST `/api/minutes` (Upsert)
+### POST `/api/minutes` (업서트)
 - 필수: `council`, `url`
 - 선택: `committee`, `session`, `meeting_no`, `meeting_date`, `content`, `tag`, `attendee`, `agenda`
 - `Content-Type: application/json` 필요
@@ -156,7 +156,7 @@
 
 ## 발언 단락 (`/api/segments`)
 
-### POST `/api/segments` (Insert)
+### POST `/api/segments` (삽입)
 - 필수: `council`
 - 선택: `committee`, `session`, `meeting_no`, `meeting_date`, `content`, `summary`, `subject`, `tag`, `importance`, `moderator`, `questioner`, `answerer`, `party`, `constituency`, `department`
 - `Content-Type: application/json` 필요

@@ -32,16 +32,16 @@ def test_extract_code_routes_contains_core_endpoints():
 
 def test_check_backlog_policy_accepts_future_only_backlog():
     module = _load_docs_contract_module()
-    backlog_text = """# Backlog
+    backlog_text = """# 백로그
 - 완료 이력은 기본적으로 `git log`로 관리합니다.
-- 상태: `Planned`
+- 상태: `계획`
 """
     assert module.check_backlog_policy(backlog_text) == []
 
 
 def test_check_backlog_policy_rejects_completed_markers():
     module = _load_docs_contract_module()
-    backlog_text = """# Backlog
+    backlog_text = """# 백로그
 - 완료 이력은 기본적으로 `git log`로 관리합니다.
 - [x] remove legacy item
 - 상태: `Completed`
@@ -104,10 +104,10 @@ def test_check_pr_template_quality_alignment_accepts_required_lines():
 def test_check_pr_template_quality_alignment_detects_missing_line():
     module = _load_docs_contract_module()
     pr_template_text = "\n".join(
-        line for line in module.REQUIRED_PR_TEMPLATE_LINES if "Maintainability impact" not in line
+        line for line in module.REQUIRED_PR_TEMPLATE_LINES if "유지보수성 영향" not in line
     )
     errors = module.check_pr_template_quality_alignment(pr_template_text)
-    assert any("Maintainability impact" in error for error in errors)
+    assert any("유지보수성 영향" in error for error in errors)
 
 
 def test_check_guardrails_doc_accepts_required_structure():
@@ -124,6 +124,6 @@ allow-ready-degraded
 
 def test_check_guardrails_doc_detects_missing_heading():
     module = _load_docs_contract_module()
-    text = "## Local/CI Baseline"
+    text = "## 로컬/CI 기본선"
     errors = module.check_guardrails_doc(text)
-    assert any("PR Context" in error for error in errors)
+    assert any("PR 문맥" in error for error in errors)

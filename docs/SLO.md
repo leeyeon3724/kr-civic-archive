@@ -1,76 +1,76 @@
-# SLO Policy
+# SLO 정책
 
-This document defines service-level indicators (SLI), objectives (SLO), error budget policy, and alert policy for `civic-archive-api`.
+이 문서는 `civic-archive-api`의 서비스 수준 지표(SLI), 목표(SLO), 오류 예산(error budget) 정책, 알림 정책을 정의합니다.
 
-## Scope
+## 범위
 
-- Service: `civic-archive-api`
-- Environment: production (`APP_ENV=production`)
-- Request scope: `/api/*` endpoints
-- Observation source: Prometheus metrics (`civic_archive_http_requests_total`, `civic_archive_http_request_duration_seconds`)
+- 서비스: `civic-archive-api`
+- 환경: 프로덕션 (`APP_ENV=production`)
+- 요청 범위: `/api/*` 엔드포인트
+- 관측 원천: Prometheus 메트릭 (`civic_archive_http_requests_total`, `civic_archive_http_request_duration_seconds`)
 
-## SLI Definitions
+## SLI 정의
 
-### Availability SLI
+### 가용성 SLI
 
-- Definition: ratio of successful requests over total requests for `/api/*`
-- Success: HTTP status code `< 500`
-- Formula:
+- 정의: `/api/*` 요청 중 성공 요청 비율
+- 성공 기준: HTTP 상태 코드 `< 500`
+- 계산식:
   - `availability = 1 - (5xx_requests / total_requests)`
 
-### Latency SLI
+### 지연시간 SLI
 
-- Definition: p95 request latency for `/api/*`
-- Source: `civic_archive_http_request_duration_seconds` histogram
-- Formula:
+- 정의: `/api/*` 요청 p95 지연시간
+- 원천: `civic_archive_http_request_duration_seconds` 히스토그램
+- 계산식:
   - `histogram_quantile(0.95, sum(rate(civic_archive_http_request_duration_seconds_bucket{path=~"/api/.*"}[5m])) by (le))`
 
-## SLO Targets
+## SLO 목표
 
-- Availability SLO (30-day rolling): `>= 99.9%`
-- Latency SLO (5m window p95): `<= 250ms`
-- Readiness SLO:
+- 가용성 SLO (30일 롤링): `>= 99.9%`
+- 지연시간 SLO (5분 윈도우 p95): `<= 250ms`
+- 준비성(Readiness) SLO:
   - `/health/live` = `200`
   - `/health/ready` = `200`
 
-## Error Budget Policy
+## 오류 예산 정책
 
-- Availability SLO 99.9% yields monthly error budget:
-  - ~43m 12s per 30 days
+- 가용성 SLO 99.9%의 월간 오류 예산:
+  - 30일 기준 약 43분 12초
 
-Burn policy:
+소진(Burn) 정책:
 
-- 2-hour burn > 10% budget: page on-call immediately, stop non-critical deploys
-- 24-hour burn > 25% budget: require incident review before feature rollout
-- 30-day burn > 50% budget: reliability freeze for non-critical changes
-- 30-day burn > 80% budget: only incident, security, and reliability changes allowed
+- 2시간 소진율 > 예산 10%: 온콜 즉시 호출, 비핵심 배포 중단
+- 24시간 소진율 > 예산 25%: 기능 롤아웃 전 인시던트 리뷰 필수
+- 30일 소진율 > 예산 50%: 비핵심 변경 신뢰성 동결
+- 30일 소진율 > 예산 80%: 인시던트/보안/신뢰성 변경만 허용
 
-## Alert Policy
+## 알림 정책
 
-### Page Alerts (high urgency)
+### 페이징 알림 (긴급)
 
-- `5xx error ratio > 5%` for 5 minutes
-- `p95 latency > 500ms` for 10 minutes
-- `/health/ready != 200` for 3 consecutive checks
+- `5xx error ratio > 5%`가 5분 지속
+- `p95 latency > 500ms`가 10분 지속
+- `/health/ready != 200`이 3회 연속 발생
 
-### Warning Alerts (medium urgency)
+### 경고 알림 (주의)
 
-- `5xx error ratio > 1%` for 15 minutes
-- `p95 latency > 300ms` for 15 minutes
-- error budget burn > 25% in 24h
+- `5xx error ratio > 1%`가 15분 지속
+- `p95 latency > 300ms`가 15분 지속
+- 24시간 내 error budget 소진율 > 25%
 
-## Deployment Guardrails
+## 배포 가드레일
 
-Before deploying to production:
+프로덕션 배포 전 아래 항목을 실행합니다.
 
-1. Run quality gates in `docs/QUALITY_GATES.md`.
-2. Run DB migration check:
+1. `docs/QUALITY_GATES.md`의 품질 게이트 실행
+2. DB 마이그레이션 점검:
    - `python -m alembic upgrade head`
-3. Run pre-deploy runtime checks (target environment):
+3. 배포 전 런타임 점검(대상 환경):
    - `python scripts/check_runtime_health.py --base-url <target-base-url>`
-4. Run benchmark regression checks:
+4. 벤치마크 회귀 점검:
    - `BENCH_PROFILE=staging BENCH_FAIL_THRESHOLD_MS=250 BENCH_FAIL_P95_THRESHOLD_MS=400 python scripts/benchmark_queries.py`
 
-## Incident Handling Linkage
+## 인시던트 연계
 
-- Incident response checklist and rollback guidance: `docs/OPERATIONS.md`
+- 인시던트 대응 체크리스트 및 롤백 지침: `docs/OPERATIONS.md`

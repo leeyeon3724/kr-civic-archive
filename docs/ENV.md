@@ -1,4 +1,4 @@
-# Environment Variables
+# 환경 변수
 
 이 문서는 애플리케이션 실행에 필요한 환경 변수의 기본값과 용도를 정리합니다.
 
@@ -7,16 +7,16 @@
 `.env.example`을 복사해 환경에 맞게 값을 설정합니다.
 
 ```bash
-# Bash
+# 배시(Bash)
 cp .env.example .env
 
-# PowerShell
+# 파워셸(PowerShell)
 Copy-Item .env.example .env
 ```
 
 애플리케이션과 Alembic은 프로젝트 루트의 `.env`를 자동 로드합니다.
 
-## Database
+## 데이터베이스
 
 | 변수 | 기본값 | 설명 |
 |------|--------|------|
@@ -32,7 +32,7 @@ Copy-Item .env.example .env
 | `DB_CONNECT_TIMEOUT_SECONDS` | `3` | DB TCP 연결 타임아웃(초) |
 | `DB_STATEMENT_TIMEOUT_MS` | `5000` | PostgreSQL statement timeout(ms) |
 
-## App Runtime
+## 애플리케이션 런타임
 
 | 변수 | 기본값 | 설명 |
 |------|--------|------|
@@ -43,7 +43,7 @@ Copy-Item .env.example .env
 | `LOG_LEVEL` | `INFO` | 로그 레벨 |
 | `LOG_JSON` | `1` | JSON 구조화 로그 사용 여부 |
 
-## Security and Auth
+## 보안 및 인증
 
 | 변수 | 기본값 | 설명 |
 |------|--------|------|
@@ -61,7 +61,7 @@ Copy-Item .env.example .env
 | `JWT_SCOPE_DELETE` | `archive:delete` | 삭제 권한 scope |
 | `JWT_ADMIN_ROLE` | `admin` | role 보유 시 scope 검사 우회 |
 
-## Rate Limit and Proxy
+## 요청 제한 및 프록시
 
 | 변수 | 기본값 | 설명 |
 |------|--------|------|
@@ -74,7 +74,7 @@ Copy-Item .env.example .env
 | `RATE_LIMIT_FAIL_OPEN` | `1` | Redis 장애 시 허용 여부 (`1` 허용 / `0` 차단) |
 | `TRUSTED_PROXY_CIDRS` | `` | 신뢰할 프록시 CIDR 목록(쉼표 구분) |
 
-## CORS and Host
+## CORS 및 호스트
 
 | 변수 | 기본값 | 설명 |
 |------|--------|------|
@@ -83,14 +83,14 @@ Copy-Item .env.example .env
 | `CORS_ALLOW_HEADERS` | `*` | 허용 헤더(쉼표 구분) |
 | `ALLOWED_HOSTS` | `*` | Trusted Host 목록(쉼표 구분) |
 
-## Ingest Guardrails
+## 적재 가드레일
 
 | 변수 | 기본값 | 설명 |
 |------|--------|------|
 | `INGEST_MAX_BATCH_ITEMS` | `200` | `POST /api/*` 최대 batch item 수 |
 | `MAX_REQUEST_BODY_BYTES` | `1048576` | `/api/*` write 요청 최대 payload(bytes) |
 
-## Strict Mode Requirements
+## 엄격 모드 요구사항
 
 `SECURITY_STRICT_MODE=1` 또는 `APP_ENV=production`이면 아래 항목이 강제됩니다.
 

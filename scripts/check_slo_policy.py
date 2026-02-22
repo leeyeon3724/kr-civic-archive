@@ -11,19 +11,19 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SLO_DOC = PROJECT_ROOT / "docs" / "SLO.md"
 
 REQUIRED_HEADINGS = [
-    "## Scope",
-    "## SLI Definitions",
-    "## SLO Targets",
-    "## Error Budget Policy",
-    "## Alert Policy",
-    "## Deployment Guardrails",
+    "## 범위",
+    "## SLI 정의",
+    "## SLO 목표",
+    "## 오류 예산 정책",
+    "## 알림 정책",
+    "## 배포 가드레일",
 ]
 
 REQUIRED_PATTERNS = [
     re.compile(r"99\.9%"),
     re.compile(r"/health/live"),
     re.compile(r"/health/ready"),
-    re.compile(r"error budget", re.IGNORECASE),
+    re.compile(r"(error budget|오류 예산)", re.IGNORECASE),
 ]
 
 
