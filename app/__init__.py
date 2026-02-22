@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from contextlib import suppress
 from typing import Any, cast
 
-from fastapi import Depends, FastAPI
+from fastapi import FastAPI
 from sqlalchemy import text
 from sqlalchemy.engine import Connection
 
@@ -22,9 +22,12 @@ from app.observability import register_observability
 from app.security import (
     build_api_key_dependency,
     build_jwt_dependency,
-    build_metrics_access_dependencies,
     build_rate_limit_dependency,
     check_rate_limit_backend_health,
+)
+from app.security_access import (
+    build_metrics_access_dependencies,
+    build_protected_dependencies,
 )
 from app.version import APP_VERSION
 
@@ -83,15 +86,17 @@ def create_app(app_config: Config | None = None) -> FastAPI:
     api.state.db_engine = db_engine
     api.state.connection_provider = connection_provider
 
-    api_key_dependency = build_api_key_dependency(app_config)
-    jwt_dependency = build_jwt_dependency(app_config)
-    rate_limit_dependency = build_rate_limit_dependency(app_config)
-    protected_dependencies: list[Any] = [
-        Depends(api_key_dependency),
-        Depends(jwt_dependency),
-        Depends(rate_limit_dependency),
-    ]
-    metrics_dependencies = build_metrics_access_dependencies(app_config)
+    protected_dependencies: list[Any] = build_protected_dependencies(
+        app_config,
+        build_api_key_dependency=build_api_key_dependency,
+        build_jwt_dependency=build_jwt_dependency,
+        build_rate_limit_dependency=build_rate_limit_dependency,
+    )
+    metrics_dependencies = build_metrics_access_dependencies(
+        app_config,
+        build_api_key_dependency=build_api_key_dependency,
+        build_jwt_dependency=build_jwt_dependency,
+    )
     register_observability(api, metrics_dependencies=metrics_dependencies)
 
     def db_health_check() -> tuple[bool, str | None]:

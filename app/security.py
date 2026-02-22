@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from typing import Any, Callable
 
-from fastapi import Depends, Request
+from fastapi import Request
 
 from app.errors import http_error
+from app.security_access import build_metrics_access_dependencies as _build_metrics_access_dependencies_impl
 from app.security_dependencies import (
     build_api_key_dependency as _build_api_key_dependency_impl,
     build_jwt_dependency as _build_jwt_dependency_impl,
@@ -157,13 +158,8 @@ def build_rate_limit_dependency(config) -> Callable:
 
 
 def build_metrics_access_dependencies(config: Any) -> list[Any]:
-    dependencies: list[Any] = []
-
-    if bool(config.REQUIRE_API_KEY):
-        dependencies.append(Depends(build_api_key_dependency(config)))
-    if bool(config.REQUIRE_JWT):
-        dependencies.append(Depends(build_jwt_dependency(config)))
-
-    # 운영 관측성 엔드포인트는 API 보호 정책과 분리해 운영합니다.
-    # 기본 동작은 API 보호 정책만 따릅니다.
-    return dependencies
+    return _build_metrics_access_dependencies_impl(
+        config,
+        build_api_key_dependency=build_api_key_dependency,
+        build_jwt_dependency=build_jwt_dependency,
+    )
