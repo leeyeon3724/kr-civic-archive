@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from collections import OrderedDict
 import logging
-import sys
 import time
 from typing import Any
 from uuid import uuid4
@@ -178,7 +177,7 @@ def register_observability(api: FastAPI, *, metrics_dependencies: list[Any] | No
 
     @api.middleware("http")
     async def request_observability(request: Request, call_next):
-        request_id = request.headers.get("X-Request-Id") or str(uuid4())
+        request_id = request.headers.get("X-Request-Id") or getattr(request.state, "request_id", None) or str(uuid4())
         request.state.request_id = request_id
         started = time.perf_counter()
         client_ip = request.client.host if request.client else None
@@ -186,66 +185,68 @@ def register_observability(api: FastAPI, *, metrics_dependencies: list[Any] | No
 
         try:
             response = await call_next(request)
-        finally:
+        except Exception as exc:
             elapsed = time.perf_counter() - started
             path_resolution_started = time.perf_counter()
             path, path_strategy = _metric_path_label(request, api)
             PATH_LABEL_RESOLUTION_LATENCY.labels(path_strategy).observe(
                 time.perf_counter() - path_resolution_started
             )
-            current_exc = sys.exc_info()[1]
-            if current_exc is not None:
-                status_code = 500
-                if isinstance(current_exc, Exception):
-                    status_code = _status_code_from_exception(current_exc)
-                _observe_request_metrics(
-                    method=request.method,
-                    path=path,
-                    status_code=status_code,
-                    elapsed_seconds=elapsed,
-                )
-                log_payload = _build_request_log_payload(
-                    request_id=request_id,
-                    method=request.method,
-                    path=path,
-                    status_code=status_code,
-                    elapsed_seconds=elapsed,
-                    client_ip=client_ip,
-                )
-                if status_code >= 500:
-                    logger.exception(
-                        "request_failed",
-                        extra=log_payload,
-                    )
-                else:
-                    logger.warning(
-                        "request_failed",
-                        extra=log_payload,
-                    )
-            else:
-                assert response is not None
-                status_code = int(response.status_code)
-                _observe_request_metrics(
-                    method=request.method,
-                    path=path,
-                    status_code=status_code,
-                    elapsed_seconds=elapsed,
-                )
-                response.headers["X-Request-Id"] = request_id
-                log_payload = _build_request_log_payload(
-                    request_id=request_id,
-                    method=request.method,
-                    path=path,
-                    status_code=status_code,
-                    elapsed_seconds=elapsed,
-                    client_ip=client_ip,
-                )
-                logger.info(
-                    "request_completed",
+            status_code = _status_code_from_exception(exc)
+            _observe_request_metrics(
+                method=request.method,
+                path=path,
+                status_code=status_code,
+                elapsed_seconds=elapsed,
+            )
+            log_payload = _build_request_log_payload(
+                request_id=request_id,
+                method=request.method,
+                path=path,
+                status_code=status_code,
+                elapsed_seconds=elapsed,
+                client_ip=client_ip,
+            )
+            if status_code >= 500:
+                logger.exception(
+                    "request_failed",
                     extra=log_payload,
                 )
+            else:
+                logger.warning(
+                    "request_failed",
+                    extra=log_payload,
+                )
+            raise
+
+        elapsed = time.perf_counter() - started
+        path_resolution_started = time.perf_counter()
+        path, path_strategy = _metric_path_label(request, api)
+        PATH_LABEL_RESOLUTION_LATENCY.labels(path_strategy).observe(
+            time.perf_counter() - path_resolution_started
+        )
 
         assert response is not None
+        status_code = int(response.status_code)
+        _observe_request_metrics(
+            method=request.method,
+            path=path,
+            status_code=status_code,
+            elapsed_seconds=elapsed,
+        )
+        response.headers["X-Request-Id"] = request_id
+        log_payload = _build_request_log_payload(
+            request_id=request_id,
+            method=request.method,
+            path=path,
+            status_code=status_code,
+            elapsed_seconds=elapsed,
+            client_ip=client_ip,
+        )
+        logger.info(
+            "request_completed",
+            extra=log_payload,
+        )
         return response
 
     @api.get("/metrics", tags=["system"], include_in_schema=False, dependencies=route_dependencies)

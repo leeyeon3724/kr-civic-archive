@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable, MutableMapping
 from typing import Any, cast
+from uuid import uuid4
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -28,6 +29,8 @@ def register_core_middleware(api: FastAPI, config: Config) -> None:
         request: Request,
         call_next: Callable[[Request], Awaitable[Response]],
     ) -> Response:
+        request.state.request_id = request.headers.get("X-Request-Id") or getattr(request.state, "request_id", None) or str(uuid4())
+
         guard_details_attr = "_request_size_guard_details"
         if request.url.path.startswith("/api/") and request.method in {"POST", "PUT", "PATCH"}:
             max_request_body_bytes = int(config.MAX_REQUEST_BODY_BYTES)

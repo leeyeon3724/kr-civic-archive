@@ -964,12 +964,14 @@ def test_request_size_guard_rejects_large_content_length(make_engine):
 
     with TestClient(app) as tc:
         body = oversized_echo_body()
+        request_id = "test-overflow-1"
         response = tc.post(
             "/api/echo",
             content=body,
-            headers={"Content-Type": "application/json"},
+            headers={"Content-Type": "application/json", "X-Request-Id": request_id},
         )
         payload = assert_payload_too_large_response(response, max_request_body_bytes=64)
+        assert response.headers["X-Request-Id"] == request_id
         assert payload["details"]["content_length"] > 64
 
 
@@ -989,6 +991,7 @@ def test_request_size_guard_rejects_oversized_streaming_body_without_reliable_co
             headers={"Content-Type": "application/json"},
         )
         assert response.status_code == 413
+        assert response.headers.get("X-Request-Id")
         payload = response.json()
         assert payload["code"] == "PAYLOAD_TOO_LARGE"
         assert payload["details"]["max_request_body_bytes"] == 64
