@@ -73,6 +73,16 @@ CI 유사 실행:
 BENCH_PROFILE=staging BENCH_FAIL_THRESHOLD_MS=250 BENCH_FAIL_P95_THRESHOLD_MS=400 python scripts/benchmark_queries.py
 ```
 
+리포트 산출(JSON/Markdown + baseline delta):
+
+```bash
+python scripts/benchmark_queries.py \
+  --profile staging \
+  --baseline-json artifacts/bench-baseline.json \
+  --output-json artifacts/bench-current.json \
+  --output-md artifacts/bench-report.md
+```
+
 릴리스 전 점검:
 
 ```bash
@@ -85,6 +95,7 @@ python scripts/benchmark_queries.py --profile prod --runs 40 --seed-rows 500
 
 - 기준 커밋 대비 delta(%) 또는 delta(ms)
 - 악화 시 원인/완화 계획
+- `scripts/benchmark_queries.py --baseline-json ... --output-md ...` 결과 표를 첨부
 
 예시 템플릿:
 

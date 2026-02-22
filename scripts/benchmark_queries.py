@@ -191,6 +191,21 @@ def _parse_args() -> argparse.Namespace:
         default=max(50, int(os.getenv("BENCH_SEED_ROWS", "300"))),
         help="Rows to seed before running scenarios.",
     )
+    parser.add_argument(
+        "--baseline-json",
+        default=(os.getenv("BENCH_BASELINE_JSON") or "").strip() or None,
+        help="Optional baseline benchmark JSON output path for delta calculation.",
+    )
+    parser.add_argument(
+        "--output-json",
+        default=(os.getenv("BENCH_OUTPUT_JSON") or "").strip() or None,
+        help="Optional path to write benchmark JSON report.",
+    )
+    parser.add_argument(
+        "--output-md",
+        default=(os.getenv("BENCH_OUTPUT_MD") or "").strip() or None,
+        help="Optional path to write benchmark Markdown report.",
+    )
     return parser.parse_args()
 
 
@@ -249,6 +264,134 @@ def evaluate_thresholds(
                 )
 
     return failures
+
+
+def extract_benchmark_results(payload: dict[str, Any]) -> dict[str, dict[str, float | list[str] | int]]:
+    extracted: dict[str, dict[str, float | list[str] | int]] = {}
+    for scenario_name in SCENARIO_TAGS:
+        stats = payload.get(scenario_name)
+        if isinstance(stats, dict):
+            extracted[scenario_name] = stats
+    return extracted
+
+
+def compute_baseline_deltas(
+    *,
+    current_results: dict[str, dict[str, float | list[str] | int]],
+    baseline_results: dict[str, dict[str, float | list[str] | int]],
+) -> dict[str, dict[str, float | None]]:
+    deltas: dict[str, dict[str, float | None]] = {}
+    for scenario_name, current in current_results.items():
+        baseline = baseline_results.get(scenario_name)
+        if baseline is None:
+            continue
+
+        current_avg = float(current["avg_ms"])
+        baseline_avg = float(baseline["avg_ms"])
+        current_p95 = float(current["p95_ms"])
+        baseline_p95 = float(baseline["p95_ms"])
+
+        avg_delta = round(current_avg - baseline_avg, 2)
+        p95_delta = round(current_p95 - baseline_p95, 2)
+
+        deltas[scenario_name] = {
+            "baseline_avg_ms": round(baseline_avg, 2),
+            "current_avg_ms": round(current_avg, 2),
+            "delta_avg_ms": avg_delta,
+            "delta_avg_pct": round((avg_delta / baseline_avg) * 100.0, 2) if baseline_avg else None,
+            "baseline_p95_ms": round(baseline_p95, 2),
+            "current_p95_ms": round(current_p95, 2),
+            "delta_p95_ms": p95_delta,
+            "delta_p95_pct": round((p95_delta / baseline_p95) * 100.0, 2) if baseline_p95 else None,
+        }
+
+    return deltas
+
+
+def build_benchmark_report(
+    *,
+    results: dict[str, dict[str, float | list[str] | int]],
+    profile: str,
+    avg_threshold: float | None,
+    p95_threshold: float | None,
+    baseline_results: dict[str, dict[str, float | list[str] | int]] | None = None,
+) -> dict[str, Any]:
+    report: dict[str, Any] = dict(results)
+    report["_meta"] = {
+        "profile": profile,
+        "profile_thresholds": get_profile_thresholds(profile),
+        "global_thresholds": {"avg_ms": avg_threshold, "p95_ms": p95_threshold},
+    }
+    report["_delta"] = (
+        compute_baseline_deltas(current_results=results, baseline_results=baseline_results or {})
+        if baseline_results
+        else {}
+    )
+    return report
+
+
+def render_markdown_report(report: dict[str, Any]) -> str:
+    meta = report.get("_meta", {})
+    profile = str(meta.get("profile") or "none")
+    lines: list[str] = [
+        "# Benchmark Report",
+        "",
+        f"- profile: `{profile}`",
+        "",
+        "## Scenario Summary",
+        "",
+        "| Scenario | avg_ms | p95_ms | runs |",
+        "|----------|--------|--------|------|",
+    ]
+
+    for scenario_name in SCENARIO_TAGS:
+        stats = report.get(scenario_name)
+        if not isinstance(stats, dict):
+            continue
+        lines.append(
+            "| {scenario} | {avg:.2f} | {p95:.2f} | {runs} |".format(
+                scenario=scenario_name,
+                avg=float(stats["avg_ms"]),
+                p95=float(stats["p95_ms"]),
+                runs=int(stats["runs"]),
+            )
+        )
+
+    delta_payload = report.get("_delta")
+    if isinstance(delta_payload, dict) and delta_payload:
+        lines.extend(
+            [
+                "",
+                "## Baseline Delta",
+                "",
+                "| Scenario | Baseline p95(ms) | Current p95(ms) | Delta p95(ms) | Delta p95(%) |",
+                "|----------|------------------|-----------------|---------------|--------------|",
+            ]
+        )
+        for scenario_name in SCENARIO_TAGS:
+            delta = delta_payload.get(scenario_name)
+            if not isinstance(delta, dict):
+                continue
+            delta_pct = delta.get("delta_p95_pct")
+            delta_pct_text = "-" if delta_pct is None else f"{float(delta_pct):+.2f}%"
+            lines.append(
+                "| {scenario} | {baseline:.2f} | {current:.2f} | {delta_ms:+.2f} | {delta_pct} |".format(
+                    scenario=scenario_name,
+                    baseline=float(delta["baseline_p95_ms"]),
+                    current=float(delta["current_p95_ms"]),
+                    delta_ms=float(delta["delta_p95_ms"]),
+                    delta_pct=delta_pct_text,
+                )
+            )
+
+    lines.append("")
+    return "\n".join(lines)
+
+
+def _write_report(path: str, content: str) -> None:
+    file_path = Path(path).resolve()
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+    file_path.write_text(content, encoding="utf-8")
 
 
 def _collect_results(
@@ -346,13 +489,25 @@ def main() -> int:
     if p95_threshold_raw:
         p95_threshold = float(p95_threshold_raw)
 
-    output: dict[str, Any] = dict(results)
-    output["_meta"] = {
-        "profile": args.profile,
-        "profile_thresholds": get_profile_thresholds(args.profile),
-        "global_thresholds": {"avg_ms": avg_threshold, "p95_ms": p95_threshold},
-    }
-    print(json.dumps(output, ensure_ascii=False, indent=2))
+    baseline_results = None
+    if args.baseline_json:
+        baseline_payload = json.loads(Path(args.baseline_json).read_text(encoding="utf-8-sig"))
+        baseline_results = extract_benchmark_results(baseline_payload)
+
+    report = build_benchmark_report(
+        results=results,
+        profile=args.profile,
+        avg_threshold=avg_threshold,
+        p95_threshold=p95_threshold,
+        baseline_results=baseline_results,
+    )
+    report_json = json.dumps(report, ensure_ascii=False, indent=2)
+    print(report_json)
+
+    if args.output_json:
+        _write_report(args.output_json, report_json)
+    if args.output_md:
+        _write_report(args.output_md, render_markdown_report(report))
 
     failures = evaluate_thresholds(
         results,

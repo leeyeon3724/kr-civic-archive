@@ -54,3 +54,48 @@ def test_evaluate_thresholds_handles_unknown_profile():
         p95_threshold=None,
     )
     assert failures == ["Unknown benchmark profile: unknown"]
+
+
+def test_compute_baseline_deltas_calculates_ms_and_percent_changes():
+    module = _load_benchmark_module()
+    current = {
+        "news_list": {"avg_ms": 220.0, "p95_ms": 330.0, "tags": [], "runs": 3},
+        "minutes_list": {"avg_ms": 200.0, "p95_ms": 300.0, "tags": [], "runs": 3},
+        "segments_list": {"avg_ms": 210.0, "p95_ms": 320.0, "tags": [], "runs": 3},
+    }
+    baseline = {
+        "news_list": {"avg_ms": 200.0, "p95_ms": 300.0, "tags": [], "runs": 3},
+        "minutes_list": {"avg_ms": 200.0, "p95_ms": 300.0, "tags": [], "runs": 3},
+        "segments_list": {"avg_ms": 240.0, "p95_ms": 360.0, "tags": [], "runs": 3},
+    }
+
+    delta = module.compute_baseline_deltas(current_results=current, baseline_results=baseline)
+
+    assert delta["news_list"]["delta_avg_ms"] == 20.0
+    assert delta["news_list"]["delta_avg_pct"] == 10.0
+    assert delta["news_list"]["delta_p95_ms"] == 30.0
+    assert delta["segments_list"]["delta_p95_ms"] == -40.0
+    assert delta["segments_list"]["delta_p95_pct"] == -11.11
+
+
+def test_render_markdown_report_includes_baseline_delta_table():
+    module = _load_benchmark_module()
+    report = {
+        "news_list": {"avg_ms": 210.0, "p95_ms": 320.0, "runs": 3, "tags": []},
+        "minutes_list": {"avg_ms": 200.0, "p95_ms": 300.0, "runs": 3, "tags": []},
+        "segments_list": {"avg_ms": 220.0, "p95_ms": 340.0, "runs": 3, "tags": []},
+        "_meta": {"profile": "staging"},
+        "_delta": {
+            "news_list": {
+                "baseline_p95_ms": 300.0,
+                "current_p95_ms": 320.0,
+                "delta_p95_ms": 20.0,
+                "delta_p95_pct": 6.67,
+            }
+        },
+    }
+
+    markdown = module.render_markdown_report(report)
+    assert "## Scenario Summary" in markdown
+    assert "## Baseline Delta" in markdown
+    assert "| news_list | 300.00 | 320.00 | +20.00 | +6.67% |" in markdown
