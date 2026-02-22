@@ -5,6 +5,7 @@ import pytest
 from conftest import build_test_config
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.testclient import TestClient
+from unittest.mock import patch
 
 import app.bootstrap.routes as bootstrap_routes_module
 from app.bootstrap.exception_handlers import register_exception_handlers
@@ -12,6 +13,7 @@ from app.bootstrap.middleware import register_core_middleware
 from app.bootstrap.routes import register_domain_routes
 from app.bootstrap.system_routes import register_system_routes
 from app.bootstrap.validation import validate_startup_config
+from app import create_app
 from app.routes.common import to_date_filter
 
 
@@ -84,6 +86,34 @@ def test_system_routes_module_readiness_and_echo():
         echo = client.post("/api/echo", json={"hello": "world"})
         assert echo.status_code == 200
         assert echo.json() == {"you_sent": {"hello": "world"}}
+
+
+def test_create_app_disposes_db_engine_on_shutdown():
+    class _NoopScope:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return None
+
+    class _TrackingEngine:
+        def __init__(self):
+            self.disposed = False
+
+        def begin(self):
+            return _NoopScope()
+
+        def dispose(self):
+            self.disposed = True
+
+    engine = _TrackingEngine()
+    with patch("app.database.create_engine", return_value=engine):
+        app = create_app(build_test_config())
+
+    with TestClient(app):
+        assert engine.disposed is False
+
+    assert engine.disposed is True
 
 
 def test_exception_handlers_module_normalizes_errors():
