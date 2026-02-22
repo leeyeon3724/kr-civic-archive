@@ -41,7 +41,7 @@
   - 메서드별 scope 정책: `JWT_SCOPE_READ`, `JWT_SCOPE_WRITE`, `JWT_SCOPE_DELETE`
   - `JWT_ADMIN_ROLE` role 보유 시 scope 검사 우회
 - 운영 strict 모드(`SECURITY_STRICT_MODE=1` 또는 `APP_ENV=production`)에서는 인증/호스트/CORS/rate-limit 가드가 강제됨
-- `DEBUG`는 앱 설정 플래그이며 런타임 서버의 `--reload` 모드를 자동 활성화하지 않음
+- `DEBUG`는 앱 설정 플래그이며 `uvicorn --reload` 모드를 자동 활성화하지 않음
 - 요청 제한이 활성화된 경우(`RATE_LIMIT_PER_MINUTE>0`) IP 기준 `429 (RATE_LIMITED)` 응답 가능
   - 백엔드: `RATE_LIMIT_BACKEND=memory|redis` (`redis` 사용 시 `REDIS_URL` 필요)
   - Redis 장애 시 fallback 정책: `RATE_LIMIT_FAIL_OPEN` (`1`=허용, `0`=차단)

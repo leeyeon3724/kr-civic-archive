@@ -38,6 +38,11 @@ REQUIRED_ENV_VARS = [
     "INGEST_MAX_BATCH_ITEMS",
     "MAX_REQUEST_BODY_BYTES",
 ]
+REQUIRED_SECURITY_COMMANDS = [
+    "cyclonedx-py requirements --output-reproducible --of JSON -o sbom-runtime.cdx.json requirements.txt",
+    "pip-audit -r requirements.txt -r requirements-dev.txt",
+    "bandit -q -r app scripts -ll",
+]
 
 
 def read_text(path: Path) -> str:
@@ -289,6 +294,32 @@ def check_backlog_policy(backlog_text: str) -> list[str]:
     return errors
 
 
+def check_security_gate_alignment(quality_gates_text: str, contributing_text: str) -> list[str]:
+    errors: list[str] = []
+    for command in REQUIRED_SECURITY_COMMANDS:
+        if command not in quality_gates_text:
+            errors.append(f"[docs/QUALITY_GATES.md] Missing security command: `{command}`")
+        if command not in contributing_text:
+            errors.append(f"[docs/CONTRIBUTING.md] Missing security command: `{command}`")
+    return errors
+
+
+def check_debug_mode_doc_alignment(*, env_text: str, api_text: str, architecture_text: str) -> list[str]:
+    errors: list[str] = []
+    required_hint = "uvicorn --reload"
+    documents = [
+        ("docs/ENV.md", env_text),
+        ("docs/API.md", api_text),
+        ("docs/ARCHITECTURE.md", architecture_text),
+    ]
+    for doc_name, text in documents:
+        if "DEBUG" not in text:
+            errors.append(f"[{doc_name}] Missing DEBUG guidance.")
+        if required_hint not in text:
+            errors.append(f"[{doc_name}] Missing DEBUG reload guidance: `{required_hint}`.")
+    return errors
+
+
 def main() -> int:
     route_files = discover_route_files(APP_ROOT)
     if not route_files:
@@ -300,8 +331,20 @@ def main() -> int:
     env_file = PROJECT_ROOT / "docs" / "ENV.md"
     backlog_file = PROJECT_ROOT / "docs" / "BACKLOG.md"
     env_example_file = PROJECT_ROOT / ".env.example"
+    quality_gates_file = PROJECT_ROOT / "docs" / "QUALITY_GATES.md"
+    contributing_file = PROJECT_ROOT / "docs" / "CONTRIBUTING.md"
+    architecture_file = PROJECT_ROOT / "docs" / "ARCHITECTURE.md"
 
-    for file_path in [readme_file, api_file, env_file, backlog_file, env_example_file]:
+    for file_path in [
+        readme_file,
+        api_file,
+        env_file,
+        backlog_file,
+        env_example_file,
+        quality_gates_file,
+        contributing_file,
+        architecture_file,
+    ]:
         if not file_path.exists():
             print(f"Required file not found: {file_path}")
             return 2
@@ -312,6 +355,9 @@ def main() -> int:
     env_text = read_text(env_file)
     env_example_text = read_text(env_example_file)
     backlog_text = read_text(backlog_file)
+    quality_gates_text = read_text(quality_gates_file)
+    contributing_text = read_text(contributing_file)
+    architecture_text = read_text(architecture_file)
     env_doc_defaults = extract_env_doc_defaults(env_text)
 
     errors: list[str] = []
@@ -320,6 +366,14 @@ def main() -> int:
     errors.extend(check_env_doc(env_text))
     errors.extend(check_env_example(env_example_text, env_doc_defaults))
     errors.extend(check_backlog_policy(backlog_text))
+    errors.extend(check_security_gate_alignment(quality_gates_text, contributing_text))
+    errors.extend(
+        check_debug_mode_doc_alignment(
+            env_text=env_text,
+            api_text=read_text(api_file),
+            architecture_text=architecture_text,
+        )
+    )
 
     if errors:
         print("Route-documentation contract check failed.\n")
@@ -330,7 +384,7 @@ def main() -> int:
         "Route-documentation contract check passed: "
         f"{len(code_routes)} endpoints verified in docs/API.md "
         f"(route files auto-discovered: {len(route_files)}), "
-        "README links, ENV docs, .env.example defaults, and BACKLOG policy verified."
+        "README links, ENV/.env.example docs, security gates, DEBUG docs, and BACKLOG policy verified."
     )
     return 0
 

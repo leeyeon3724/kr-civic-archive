@@ -72,3 +72,22 @@ def test_check_env_example_detects_default_mismatch():
     module = _load_docs_contract_module()
     errors = module.check_env_example("APP_ENV=production", {"APP_ENV": "`development`"})
     assert any("Default mismatch for `APP_ENV`" in error for error in errors)
+
+
+def test_check_security_gate_alignment_detects_missing_command():
+    module = _load_docs_contract_module()
+    quality = "pip-audit -r requirements.txt -r requirements-dev.txt"
+    contributing = quality
+    errors = module.check_security_gate_alignment(quality, contributing)
+    assert any("cyclonedx-py requirements" in error for error in errors)
+    assert any("bandit -q -r app scripts -ll" in error for error in errors)
+
+
+def test_check_debug_mode_doc_alignment_requires_reload_guidance():
+    module = _load_docs_contract_module()
+    errors = module.check_debug_mode_doc_alignment(
+        env_text="DEBUG mode guide",
+        api_text="DEBUG mention",
+        architecture_text="DEBUG mention",
+    )
+    assert any("uvicorn --reload" in error for error in errors)
