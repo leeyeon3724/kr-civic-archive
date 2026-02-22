@@ -1,4 +1,5 @@
 import logging
+from datetime import date
 
 import pytest
 from conftest import build_test_config
@@ -11,6 +12,7 @@ from app.bootstrap.middleware import register_core_middleware
 from app.bootstrap.routes import register_domain_routes
 from app.bootstrap.system_routes import register_system_routes
 from app.bootstrap.validation import validate_startup_config
+from app.routes.common import to_date_filter
 
 
 def test_validation_module_rejects_invalid_rate_limit_backend():
@@ -112,3 +114,8 @@ def test_exception_handlers_module_normalizes_errors():
         boom = client.get("/boom")
         assert boom.status_code == 500
         assert boom.json()["code"] == "INTERNAL_ERROR"
+
+
+def test_routes_common_date_filter_normalizes_optional_values():
+    assert to_date_filter(None) is None
+    assert to_date_filter(date(2026, 2, 22)) == "2026-02-22"

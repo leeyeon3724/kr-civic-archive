@@ -5,7 +5,7 @@ from fastapi import APIRouter, Body, Depends, Query, Request
 from app.errors import http_error
 from app.ports.dto import MinutesUpsertDTO
 from app.ports.services import MinutesServicePort
-from app.routes.common import ERROR_RESPONSES, enforce_ingest_batch_limit
+from app.routes.common import ERROR_RESPONSES, enforce_ingest_batch_limit, to_date_filter
 from app.schemas import (
     DeleteResponse,
     MinutesItemBase,
@@ -74,8 +74,8 @@ def list_minutes(
         committee=committee,
         session=session,
         meeting_no=meeting_no,
-        date_from=date_from.isoformat() if date_from else None,
-        date_to=date_to.isoformat() if date_to else None,
+        date_from=to_date_filter(date_from),
+        date_to=to_date_filter(date_to),
         page=page,
         size=size,
     )

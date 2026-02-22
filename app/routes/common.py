@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Any
 
 from fastapi import Request
@@ -27,3 +28,9 @@ def enforce_ingest_batch_limit(request: Request, batch_size: int) -> None:
             "Payload Too Large",
             details={"max_batch_items": limit, "received_batch_items": int(batch_size)},
         )
+
+
+def to_date_filter(value: date | None) -> str | None:
+    if value is None:
+        return None
+    return value.isoformat()
