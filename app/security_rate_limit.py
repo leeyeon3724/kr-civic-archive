@@ -132,7 +132,7 @@ return current
         if now < self._degraded_until:
             return self.fail_open
 
-        bucket = int(time.time() // 60)
+        bucket = int(time.time() // self.window_seconds)
         redis_key = f"{self.key_prefix}:{bucket}:{key}"
 
         try:
