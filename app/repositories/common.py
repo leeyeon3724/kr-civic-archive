@@ -34,6 +34,13 @@ def dedupe_rows_by_key(items: list[dict[str, Any]], *, key: str) -> list[dict[st
     return deduped_reversed
 
 
+def normalize_optional_str(value: str | None) -> str | None:
+    if value is None:
+        return None
+    normalized = value.strip()
+    return normalized or None
+
+
 def execute_paginated_query(
     *,
     list_stmt: Any,
@@ -61,6 +68,8 @@ def add_truthy_equals_filter(
     conditions: list[Any],
     params: dict[str, Any],
 ) -> None:
+    if isinstance(value, str):
+        value = normalize_optional_str(value)
     if not value:
         return
     conditions.append(column_expr == bindparam(param_name))
@@ -88,10 +97,8 @@ def add_split_search_filter(
     conditions: list[Any],
     params: dict[str, Any],
 ) -> None:
-    if query is None:
-        return
-    normalized_query = query.strip()
-    if not normalized_query:
+    normalized_query = normalize_optional_str(query)
+    if normalized_query is None:
         return
     conditions.append(build_split_search_condition(columns=columns))
     params.update(build_split_search_params(normalized_query))
