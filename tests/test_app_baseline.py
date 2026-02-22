@@ -66,6 +66,19 @@ def test_normalize_minutes_preserves_string_meeting_no(minutes_module):
     assert result["meeting_no_combined"] == "Session-A-12"
 
 
+def test_normalize_minutes_keeps_numeric_string_meeting_no_as_text(minutes_module):
+    result = minutes_module.normalize_minutes(
+        {
+            "council": "Sample Council",
+            "session": "29th",
+            "url": "https://example.com/minutes/2a",
+            "meeting_no": "3",
+        }
+    )
+    assert result["meeting_no"] is None
+    assert result["meeting_no_combined"] == "3"
+
+
 def test_normalize_minutes_converts_numeric_meeting_no(minutes_module):
     result = minutes_module.normalize_minutes(
         {
@@ -113,6 +126,18 @@ def test_normalize_segment_ignores_boolean_meeting_no(segments_module):
     )
     assert result["meeting_no"] is None
     assert result["meeting_no_combined"] == "301"
+
+
+def test_normalize_segment_keeps_numeric_string_meeting_no_as_text(segments_module):
+    result = segments_module.normalize_segment(
+        {
+            "council": "A",
+            "session": "301",
+            "meeting_no": "3",
+        }
+    )
+    assert result["meeting_no"] is None
+    assert result["meeting_no_combined"] == "3"
 
 
 def test_upsert_articles_counts_insert_and_update(news_module, make_connection_provider):

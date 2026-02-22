@@ -135,6 +135,7 @@
 
 `meeting_no` 정규화:
 - 문자열이면 그대로 `meeting_no_combined` 저장
+- 문자열 숫자(`"3"`)도 문자열로 취급하며 `meeting_no` 정수 필드로 변환하지 않음
 - 숫자면 `session`과 결합해 `"{session} {n}차"`
 - 응답에서는 `meeting_no_combined`를 `meeting_no`로 반환
 
@@ -170,6 +171,11 @@
 - 인증 활성화 시 `401 (UNAUTHORIZED)` 가능
 - 요청 제한 활성화 시 `429 (RATE_LIMITED)` 가능
 - 배치/요청 크기 상한 초과 시 `413 (PAYLOAD_TOO_LARGE)` 가능
+
+`meeting_no` 정규화:
+- 문자열이면 그대로 `meeting_no_combined` 저장
+- 문자열 숫자(`"3"`)도 문자열로 취급하며 `meeting_no` 정수 필드로 변환하지 않음
+- 숫자면 `session`과 결합해 `"{session} {n}차"`
 
 ### GET `/api/segments`
 - 쿼리: `q`, `council`, `committee`, `session`, `meeting_no`, `importance`, `party`, `constituency`, `department`, `from`, `to`, `page`, `size`
