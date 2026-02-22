@@ -151,18 +151,6 @@ def parse_importance_value(raw: object, *, required: bool) -> int | None:
     return value
 
 
-def parse_importance_query(raw: str | None) -> int | None:
-    if raw is None:
-        return None
-    try:
-        value = int(raw)
-    except (TypeError, ValueError):
-        raise bad_request("importance must be an integer.")
-    if value not in (1, 2, 3):
-        raise bad_request("importance must be one of 1, 2, 3.")
-    return value
-
-
 class SegmentsService:
     def __init__(self, *, repository: SegmentsRepositoryPort) -> None:
         self._repository = repository
