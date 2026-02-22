@@ -315,6 +315,24 @@ def test_metrics_endpoint_exposes_prometheus_text(client):
     assert "civic_archive_http_request_duration_seconds" in body
 
 
+def test_metrics_not_rate_limited_when_only_rate_limit_is_configured(make_engine):
+    with patch("app.database.create_engine", return_value=make_engine(lambda *_: StubResult())):
+        app = create_app(
+            build_test_config(
+                REQUIRE_API_KEY=False,
+                REQUIRE_JWT=False,
+                RATE_LIMIT_PER_MINUTE=1,
+            )
+        )
+
+    with TestClient(app) as tc:
+        first = tc.get("/metrics")
+        second = tc.get("/metrics")
+
+    assert first.status_code == 200
+    assert second.status_code == 200
+
+
 def test_metrics_uses_low_cardinality_label_for_unmatched_route(client):
     unmatched_path = "/no-such-route-cardinality-unique-case"
     missing = client.get(unmatched_path)

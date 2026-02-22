@@ -20,6 +20,7 @@ from app.observability import register_observability
 from app.security import (
     build_api_key_dependency,
     build_jwt_dependency,
+    build_metrics_access_dependencies,
     build_rate_limit_dependency,
     check_rate_limit_backend_health,
 )
@@ -76,7 +77,8 @@ def create_app(app_config: Config | None = None) -> FastAPI:
         Depends(jwt_dependency),
         Depends(rate_limit_dependency),
     ]
-    register_observability(api, metrics_dependencies=protected_dependencies)
+    metrics_dependencies = build_metrics_access_dependencies(app_config)
+    register_observability(api, metrics_dependencies=metrics_dependencies)
 
     def db_health_check() -> tuple[bool, str | None]:
         try:
