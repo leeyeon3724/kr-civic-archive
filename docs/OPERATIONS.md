@@ -37,6 +37,60 @@
 5. Post-Incident
 - Write incident report (timeline, root cause, preventive actions)
 - Update SLO/error budget status and backlog priorities
+- If incident is release-impacting, summarize externally visible changes in `docs/CHANGELOG.md` `Unreleased` section.
+
+## Incident Scenario Templates
+
+모든 시나리오는 아래 공통 필수 항목을 같은 순서로 기록합니다.
+
+- 영향 (Impact): 사용자/엔드포인트/시간대 영향 범위
+- 원인 (Cause): 추정 원인과 확정 원인 구분
+- 임시조치 (Mitigation): 즉시 완화 조치 및 리스크
+- 복구검증 (Recovery Validation): 복구 확인 지표와 확인 시각
+
+### DB 장애 템플릿
+
+- 영향:
+- 원인:
+- 임시조치:
+- 복구검증:
+- 후속조치:
+
+### Redis/rate_limit_backend 장애 템플릿
+
+- 영향:
+- 원인:
+- 임시조치:
+- 복구검증:
+- 후속조치:
+
+### 배포/릴리스 장애 템플릿
+
+- 영향:
+- 원인:
+- 임시조치:
+- 복구검증:
+- 롤백/재배포 기록:
+
+### 과부하(트래픽 급증) 템플릿
+
+- 영향:
+- 원인:
+- 임시조치:
+- 복구검증:
+- 용량/성능 후속조치:
+
+## SEV Report Format
+
+- SEV-1 보고:
+  - 현재 영향 범위, 고객 영향, 우회 불가 여부
+  - 15분 간격 업데이트, 임시조치 ETA, 최종 복구 ETA
+- SEV-2 보고:
+  - 주요 기능 영향 범위, 우회 가능 여부
+  - 30분 간격 업데이트, 완화/복구 ETA
+- SEV-3 보고:
+  - 부분 영향 범위, 임시 우회 경로
+  - 60분 간격 업데이트, 영구 조치 일정
 
 ## Rollback Strategy
 
