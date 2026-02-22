@@ -18,10 +18,15 @@ def test_validate_quality_metrics_content_accepts_minimal_valid_doc():
 ## Performance Metrics
 p95
 ## Stability Metrics
+4xx
 5xx
+mttr
+rate_limit_backend
+fallback
 ## Reliability Metrics
 /health/live
 /health/ready
+request_id
 ## Maintainability Metrics
 coverage
 mypy

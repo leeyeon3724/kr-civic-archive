@@ -23,9 +23,11 @@
 
 | Metric | Target | Source | Gate |
 |--------|--------|--------|------|
-| validation error ratio (400/422) | 급증 시 원인 분석 및 payload/스키마 회귀 차단 | `/metrics`, API logs | 운영 모니터링 |
+| validation error ratio (4xx incl. 400/422) | 분기 기준선 대비 4xx 급증(예: +30% 이상) 시 원인 분석 및 payload/스키마 회귀 차단 | `/metrics`, API logs | 운영 모니터링 |
 | server error ratio (5xx) | 지속적 5xx 증가 없음 | `/metrics`, `docs/SLO.md` | 배포 판단 지표 |
+| rate_limit_backend fallback 동작 | Redis 장애 시 `RATE_LIMIT_FAIL_OPEN` 정책대로 fallback 동작 | `/health/ready`, `scripts/check_runtime_health.py` | 장애 모드 검증 |
 | readiness degradation | 장애 모드 외 지속 발생 금지 | `/health/ready`, `scripts/check_runtime_health.py` | 배포 전 체크 |
+| readiness MTTR | readiness degraded 상태의 치유 시간(MTTR) 15분 이내 복구 목표 | incident log, `docs/OPERATIONS.md` | 운영 사후 검토 |
 
 ## Reliability Metrics
 
@@ -33,7 +35,7 @@
 |--------|--------|--------|------|
 | health live success | `/health/live` 200 유지 | `scripts/check_runtime_health.py` | 배포 전 필수 |
 | health ready success | 정상 모드 `/health/ready` 200, 장애 모드 `503(degraded)` 명시적 관리 | `scripts/check_runtime_health.py` | 배포 전 필수 |
-| request trace completeness | 오류 응답에 `X-Request-Id` + `request_id` 유지 | 테스트/로그 | 보안/예외 회귀 테스트 |
+| request trace completeness | 오류 응답에 `X-Request-Id` + `request_id` 유지, 장애 분석 시 요청 추적 완결성 보장 | 테스트/로그 | 보안/예외 회귀 테스트 |
 
 ## Maintainability Metrics
 

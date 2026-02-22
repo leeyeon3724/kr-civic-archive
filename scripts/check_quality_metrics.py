@@ -22,9 +22,14 @@ REQUIRED_HEADINGS = [
 
 REQUIRED_PATTERNS = [
     re.compile(r"p95", re.IGNORECASE),
+    re.compile(r"4xx", re.IGNORECASE),
     re.compile(r"5xx", re.IGNORECASE),
+    re.compile(r"mttr", re.IGNORECASE),
     re.compile(r"/health/live"),
     re.compile(r"/health/ready"),
+    re.compile(r"rate_limit_backend", re.IGNORECASE),
+    re.compile(r"fallback", re.IGNORECASE),
+    re.compile(r"request_id", re.IGNORECASE),
     re.compile(r"coverage", re.IGNORECASE),
     re.compile(r"mypy", re.IGNORECASE),
     re.compile(r"check_docs_routes\.py"),
