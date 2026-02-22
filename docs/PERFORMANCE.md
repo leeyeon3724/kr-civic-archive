@@ -93,15 +93,20 @@ python scripts/benchmark_queries.py --profile prod --runs 40 --seed-rows 500
 
 `LIMIT/OFFSET + COUNT(*)` 분리 전략과 `COUNT(*) OVER()` 단일 쿼리 전략을 동일 조건에서 비교할 때 아래 스크립트를 사용합니다.
 
+현재 런타임 기본 전략:
+
+- 목록 조회 SQL에 `COUNT(*) OVER()`를 포함해 `rows > 0` 구간에서 별도 `COUNT(*)` round-trip을 제거
+- 빈 페이지(`rows == 0`)에서는 API 계약(`total` 항상 반환) 유지를 위해 `COUNT(*)` fallback 수행
+
 ```bash
 python scripts/analyze_total_strategy.py --runs 30 --limit 20 --offset 0 --output-json artifacts/total-strategy.json
 ```
 
 핵심 해석 포인트:
 
-- `split_strategy_ms.roundtrip`: 현재 API 계약(항상 `total` 반환)을 보장하는 기준값
-- `window_strategy_ms.roundtrip`: 단일 쿼리의 성능 참고값
-- `notes.window_total_absent_when_no_rows=true`: 단일 쿼리는 빈 페이지에서 `total` 전달이 누락될 수 있어 계약 보존 설계가 추가로 필요함
+- `split_strategy_ms.roundtrip`: 완전 분리 전략(legacy) 기준값
+- `window_strategy_ms.roundtrip`: `COUNT(*) OVER()` 기반 기준값
+- `notes.window_total_absent_when_no_rows=true`: 단일 쿼리 단독으로는 빈 페이지 total 누락 가능성이 있어 fallback 정책을 함께 검증
 
 운영 데이터 분포 기반 검토 시 아래 오프셋을 함께 측정합니다.
 

@@ -133,7 +133,7 @@ ASGI 엔트리포인트: `app.main:app`
 - 배치 ingest 최적화: `jsonb_to_recordset` 기반 단일 SQL 실행(뉴스/회의록 upsert, 세그먼트 insert)
 - 검색: trigram(`ILIKE` + `pg_trgm`) + FTS(`to_tsvector/websearch_to_tsquery`) 분리 전략
 - 검색 인덱스: 주요 조회 테이블별 GIN trigram index + GIN FTS index + 필터/정렬 복합 btree index
-- 목록 total: `COUNT(*)` 별도 쿼리
+- 목록 total: `COUNT(*) OVER()` 우선 + 빈 페이지(`rows == 0`) 시 `COUNT(*)` fallback
 - 요청/응답 검증: FastAPI + Pydantic 모델 기반으로 OpenAPI 자동 문서화
 - 에러 표준화: `code/message/error/request_id/details` 단일 포맷
 - 관측성: request-id 미들웨어, 구조화 로그, `/metrics` 메트릭 (라우트 미매칭은 `/_unmatched`, 알 수 없는 HTTP method는 `OTHER` 라벨로 고정)

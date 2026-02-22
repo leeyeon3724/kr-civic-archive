@@ -41,6 +41,24 @@ def normalize_optional_str(value: str | None) -> str | None:
     return normalized or None
 
 
+def _extract_row_total(
+    rows: list[dict[str, Any]],
+    *,
+    row_total_key: str,
+) -> int | None:
+    if not rows:
+        return None
+    if row_total_key not in rows[0]:
+        return None
+
+    raw_total = rows[0][row_total_key]
+    for row in rows:
+        row.pop(row_total_key, None)
+    if raw_total is None:
+        return None
+    return int(raw_total)
+
+
 def execute_paginated_query(
     *,
     list_stmt: Any,
@@ -49,20 +67,30 @@ def execute_paginated_query(
     page: int,
     size: int,
     connection_provider: ConnectionProvider,
+    row_total_key: str | None = None,
 ) -> tuple[list[dict[str, Any]], int]:
     with open_connection_scope(connection_provider) as conn:
         rows = conn.execute(
             list_stmt,
             {**params, "limit": size, "offset": (page - 1) * size},
         ).mappings().all()
-        # 첫 페이지 결과가 page size보다 작으면 전체 건수는 rows 길이와 동일합니다.
-        # 이 경우 count query를 생략해 DB round-trip을 줄입니다.
-        if page == 1 and len(rows) < size:
-            total = len(rows)
+        row_dicts = [dict(row) for row in rows]
+        if row_total_key:
+            total = _extract_row_total(row_dicts, row_total_key=row_total_key)
+            if total is None:
+                if page == 1 and len(row_dicts) < size:
+                    total = len(row_dicts)
+                else:
+                    total = conn.execute(count_stmt, params).scalar() or 0
         else:
-            total = conn.execute(count_stmt, params).scalar() or 0
+            # 첫 페이지 결과가 page size보다 작으면 전체 건수는 rows 길이와 동일합니다.
+            # 이 경우 count query를 생략해 DB round-trip을 줄입니다.
+            if page == 1 and len(row_dicts) < size:
+                total = len(row_dicts)
+            else:
+                total = conn.execute(count_stmt, params).scalar() or 0
 
-    return [dict(row) for row in rows], int(total)
+    return row_dicts, int(total)
 
 
 def add_truthy_equals_filter(
@@ -118,6 +146,7 @@ def execute_filtered_paginated_query(
     page: int,
     size: int,
     connection_provider: ConnectionProvider,
+    row_total_key: str | None = None,
 ) -> tuple[list[dict[str, Any]], int]:
     for condition in conditions:
         list_stmt = list_stmt.where(condition)
@@ -129,4 +158,5 @@ def execute_filtered_paginated_query(
         page=page,
         size=size,
         connection_provider=connection_provider,
+        row_total_key=row_total_key,
     )

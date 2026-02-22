@@ -149,6 +149,7 @@ def list_articles(
             NEWS_ARTICLES.c.keywords,
             NEWS_ARTICLES.c.created_at,
             NEWS_ARTICLES.c.updated_at,
+            func.count().over().label("__total_count"),
         )
         .order_by(
             NEWS_ARTICLES.c.published_at.desc().nullslast(),
@@ -168,6 +169,7 @@ def list_articles(
         page=page,
         size=size,
         connection_provider=connection_provider,
+        row_total_key="__total_count",
     )
     return typing_cast(list[NewsArticleRecordDTO], rows), total
 

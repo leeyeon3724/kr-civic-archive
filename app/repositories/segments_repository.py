@@ -242,6 +242,7 @@ def list_segments(
             COUNCIL_SPEECH_SEGMENTS.c.party,
             COUNCIL_SPEECH_SEGMENTS.c.constituency,
             COUNCIL_SPEECH_SEGMENTS.c.department,
+            func.count().over().label("__total_count"),
         )
         .order_by(
             COUNCIL_SPEECH_SEGMENTS.c.meeting_date.desc().nullslast(),
@@ -261,6 +262,7 @@ def list_segments(
         page=page,
         size=size,
         connection_provider=connection_provider,
+        row_total_key="__total_count",
     )
     return typing_cast(list[SegmentRecordDTO], rows), total
 

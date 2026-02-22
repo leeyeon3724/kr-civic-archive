@@ -11,11 +11,7 @@
 
 ## 현재 백로그
 
-- 상태: 진행 중
-- 항목: 목록 API total 산출의 window/CTE 단일 쿼리 전환 타당성 검토
-  - 근거: 현재는 첫 페이지 미만 결과에서만 count 생략 최적화가 적용되며, 고부하 구간에서는 여전히 list/count 분리 실행
-  - 리스크: 대규모 데이터셋 + 복합 필터에서 count query가 p95 병목으로 남을 수 있음
-  - 산출: `scripts/analyze_total_strategy.py` 결과를 기반으로 offset별 split/window 전략 비교 리포트 작성
+- 현재 활성 항목 없음
 
 ## 운영 메모
 

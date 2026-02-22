@@ -186,6 +186,7 @@ def list_minutes(
             COUNCIL_MINUTES.c.agenda,
             COUNCIL_MINUTES.c.created_at,
             COUNCIL_MINUTES.c.updated_at,
+            func.count().over().label("__total_count"),
         )
         .order_by(
             COUNCIL_MINUTES.c.meeting_date.desc().nullslast(),
@@ -205,6 +206,7 @@ def list_minutes(
         page=page,
         size=size,
         connection_provider=connection_provider,
+        row_total_key="__total_count",
     )
     return typing_cast(list[MinutesRecordDTO], rows), total
 

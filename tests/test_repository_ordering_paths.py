@@ -34,6 +34,7 @@ def test_news_list_query_uses_index_friendly_order_path(make_connection_provider
     sql = engine.connection.calls[0]["statement"].lower()
     assert "coalesce(" not in sql
     assert "published_at desc nulls last" in sql
+    assert "count(*) over ()" in sql
 
 
 def test_minutes_list_query_uses_index_friendly_order_path(make_connection_provider):
@@ -57,6 +58,7 @@ def test_minutes_list_query_uses_index_friendly_order_path(make_connection_provi
     sql = engine.connection.calls[0]["statement"].lower()
     assert "coalesce(" not in sql
     assert "meeting_date desc nulls last" in sql
+    assert "count(*) over ()" in sql
 
 
 def test_segments_list_query_uses_index_friendly_order_path(make_connection_provider):
@@ -84,3 +86,4 @@ def test_segments_list_query_uses_index_friendly_order_path(make_connection_prov
     sql = engine.connection.calls[0]["statement"].lower()
     assert "coalesce(" not in sql
     assert "meeting_date desc nulls last" in sql
+    assert "count(*) over ()" in sql
