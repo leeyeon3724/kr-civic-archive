@@ -1,0 +1,179 @@
+from __future__ import annotations
+
+from datetime import date, datetime
+from typing import cast
+
+from app.ports.dto import MinutesRecordDTO, MinutesUpsertDTO
+from app.ports.repositories import MinutesRepositoryPort
+from app.ports.services import MinutesServicePort
+from app.repositories.minutes_repository import MinutesRepository
+from app.repositories.session_provider import ConnectionProvider, ensure_connection_provider
+from app.utils import (
+    bad_request,
+    coerce_meeting_no_int,
+    combine_meeting_no,
+    normalize_date_filter,
+    normalize_optional_str,
+    normalize_pagination,
+    parse_date,
+)
+
+
+def _optional_str(value: object) -> str | None:
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        return None
+    stripped = value.strip()
+    return stripped or None
+
+
+def _as_date_input(value: object) -> str | datetime | date | None:
+    if value is None or isinstance(value, (str, datetime, date)):
+        return value
+    raise bad_request(f"meeting_date format error (YYYY-MM-DD): {value}")
+
+
+def _normalize_minutes(item: dict[str, object]) -> MinutesUpsertDTO:
+    if not isinstance(item, dict):
+        raise bad_request("Each item must be a JSON object.")
+
+    council = item.get("council")
+    url = item.get("url")
+    if not isinstance(council, str) or not council.strip() or not isinstance(url, str) or not url.strip():
+        raise bad_request("Missing required fields: council, url")
+
+    session = _optional_str(item.get("session"))
+    meeting_no_raw = item.get("meeting_no")
+    meeting_no_int = coerce_meeting_no_int(meeting_no_raw)
+
+    meeting_date = parse_date(_as_date_input(item.get("meeting_date")))
+
+    return {
+        "council": council.strip(),
+        "committee": _optional_str(item.get("committee")),
+        "session": session,
+        "meeting_no": meeting_no_int,
+        "meeting_no_combined": combine_meeting_no(session, meeting_no_raw, meeting_no_int),
+        "url": url.strip(),
+        "meeting_date": meeting_date.date() if meeting_date else None,
+        "content": _optional_str(item.get("content")),
+        "tag": item.get("tag"),
+        "attendee": item.get("attendee"),
+        "agenda": item.get("agenda"),
+    }
+
+
+class MinutesService:
+    def __init__(self, *, repository: MinutesRepositoryPort) -> None:
+        self._repository = repository
+
+    @staticmethod
+    def normalize_minutes(item: dict[str, object]) -> MinutesUpsertDTO:
+        return _normalize_minutes(item)
+
+    def upsert_minutes(self, items: list[MinutesUpsertDTO]) -> tuple[int, int]:
+        return self._repository.upsert_minutes(items)
+
+    def list_minutes(
+        self,
+        *,
+        q: str | None,
+        council: str | None,
+        committee: str | None,
+        session: str | None,
+        meeting_no: str | None,
+        date_from: str | None,
+        date_to: str | None,
+        page: int,
+        size: int,
+    ) -> tuple[list[MinutesRecordDTO], int]:
+        page, size = normalize_pagination(page, size)
+        return self._repository.list_minutes(
+            q=normalize_optional_str(q),
+            council=normalize_optional_str(council),
+            committee=normalize_optional_str(committee),
+            session=normalize_optional_str(session),
+            meeting_no=normalize_optional_str(meeting_no),
+            date_from=normalize_date_filter(date_from, field_name="from"),
+            date_to=normalize_date_filter(date_to, field_name="to"),
+            page=page,
+            size=size,
+        )
+
+    def get_minutes(self, item_id: int) -> MinutesRecordDTO | None:
+        return self._repository.get_minutes(item_id)
+
+    def delete_minutes(self, item_id: int) -> bool:
+        return self._repository.delete_minutes(item_id)
+
+
+def build_minutes_service(
+    *,
+    connection_provider: ConnectionProvider,
+    repository: MinutesRepositoryPort | None = None,
+) -> MinutesServicePort:
+    selected_repository = repository or MinutesRepository(connection_provider=connection_provider)
+    return cast(MinutesServicePort, cast(object, MinutesService(repository=selected_repository)))
+
+
+def normalize_minutes(item: dict[str, object]) -> MinutesUpsertDTO:
+    return _normalize_minutes(item)
+
+
+def upsert_minutes(
+    items: list[MinutesUpsertDTO],
+    *,
+    service: MinutesServicePort | None = None,
+    connection_provider: ConnectionProvider | None = None,
+) -> tuple[int, int]:
+    active_service = service or build_minutes_service(connection_provider=ensure_connection_provider(connection_provider))
+    return active_service.upsert_minutes(items)
+
+
+def list_minutes(
+    *,
+    q: str | None,
+    council: str | None,
+    committee: str | None,
+    session: str | None,
+    meeting_no: str | None,
+    date_from: str | None,
+    date_to: str | None,
+    page: int,
+    size: int,
+    service: MinutesServicePort | None = None,
+    connection_provider: ConnectionProvider | None = None,
+) -> tuple[list[MinutesRecordDTO], int]:
+    active_service = service or build_minutes_service(connection_provider=ensure_connection_provider(connection_provider))
+    return active_service.list_minutes(
+        q=q,
+        council=council,
+        committee=committee,
+        session=session,
+        meeting_no=meeting_no,
+        date_from=date_from,
+        date_to=date_to,
+        page=page,
+        size=size,
+    )
+
+
+def get_minutes(
+    item_id: int,
+    *,
+    service: MinutesServicePort | None = None,
+    connection_provider: ConnectionProvider | None = None,
+) -> MinutesRecordDTO | None:
+    active_service = service or build_minutes_service(connection_provider=ensure_connection_provider(connection_provider))
+    return active_service.get_minutes(item_id)
+
+
+def delete_minutes(
+    item_id: int,
+    *,
+    service: MinutesServicePort | None = None,
+    connection_provider: ConnectionProvider | None = None,
+) -> bool:
+    active_service = service or build_minutes_service(connection_provider=ensure_connection_provider(connection_provider))
+    return active_service.delete_minutes(item_id)
