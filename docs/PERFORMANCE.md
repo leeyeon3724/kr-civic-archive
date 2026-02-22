@@ -89,6 +89,28 @@ python scripts/benchmark_queries.py \
 python scripts/benchmark_queries.py --profile prod --runs 40 --seed-rows 500
 ```
 
+## total 산출 전략 비교
+
+`LIMIT/OFFSET + COUNT(*)` 분리 전략과 `COUNT(*) OVER()` 단일 쿼리 전략을 동일 조건에서 비교할 때 아래 스크립트를 사용합니다.
+
+```bash
+python scripts/analyze_total_strategy.py --runs 30 --limit 20 --offset 0 --output-json artifacts/total-strategy.json
+```
+
+핵심 해석 포인트:
+
+- `split_strategy_ms.roundtrip`: 현재 API 계약(항상 `total` 반환)을 보장하는 기준값
+- `window_strategy_ms.roundtrip`: 단일 쿼리의 성능 참고값
+- `notes.window_total_absent_when_no_rows=true`: 단일 쿼리는 빈 페이지에서 `total` 전달이 누락될 수 있어 계약 보존 설계가 추가로 필요함
+
+운영 데이터 분포 기반 검토 시 아래 오프셋을 함께 측정합니다.
+
+- `offset=0` (첫 페이지)
+- `offset=200` (중간 페이지)
+- `offset=2000` (깊은 페이지)
+
+비교 결과는 `docs/CHANGELOG.md` 또는 성능 검토 문서에 요약합니다.
+
 ## 릴리스 노트 벤치마크 델타
 
 성능 민감 변경 PR/릴리스 노트에는 아래 항목을 기록합니다.

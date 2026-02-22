@@ -11,11 +11,11 @@
 
 ## 현재 백로그
 
-- 상태: 계획
+- 상태: 진행 중
 - 항목: 목록 API total 산출의 window/CTE 단일 쿼리 전환 타당성 검토
   - 근거: 현재는 첫 페이지 미만 결과에서만 count 생략 최적화가 적용되며, 고부하 구간에서는 여전히 list/count 분리 실행
   - 리스크: 대규모 데이터셋 + 복합 필터에서 count query가 p95 병목으로 남을 수 있음
-  - 산출: 실제 운영 데이터 분포 기준으로 window/CTE 방식의 실행 계획/지연시간/리소스 비교 결과 문서화
+  - 산출: `scripts/analyze_total_strategy.py` 결과를 기반으로 offset별 split/window 전략 비교 리포트 작성
 - 상태: 진행 중
 - 항목: 테스트 디렉토리 구조 정리 및 초대형 테스트 파일 분할(2차)
   - 근거: `tests/security/test_auth_runtime.py`로 인증/엄격보안 시나리오를 1차 분리했지만, `tests/test_app_baseline.py`는 여전히 665라인
