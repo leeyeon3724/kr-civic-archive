@@ -4,6 +4,7 @@ from collections import OrderedDict
 import logging
 import sys
 import time
+from typing import Any
 from uuid import uuid4
 
 from fastapi import FastAPI, Request, Response
@@ -172,7 +173,9 @@ def _observe_request_metrics(*, method: str, path: str, status_code: int, elapse
     REQUEST_LATENCY.labels(method_label, path).observe(elapsed_seconds)
 
 
-def register_observability(api: FastAPI) -> None:
+def register_observability(api: FastAPI, *, metrics_dependencies: list[Any] | None = None) -> None:
+    route_dependencies = metrics_dependencies or []
+
     @api.middleware("http")
     async def request_observability(request: Request, call_next):
         request_id = request.headers.get("X-Request-Id") or str(uuid4())
@@ -245,6 +248,6 @@ def register_observability(api: FastAPI) -> None:
         assert response is not None
         return response
 
-    @api.get("/metrics", tags=["system"], include_in_schema=False)
+    @api.get("/metrics", tags=["system"], include_in_schema=False, dependencies=route_dependencies)
     async def metrics() -> Response:
         return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)

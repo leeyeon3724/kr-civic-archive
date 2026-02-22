@@ -356,6 +356,25 @@ def test_api_key_required_for_protected_endpoint(make_engine):
         assert authorized.json() == {"you_sent": {"hello": "world"}}
 
 
+def test_metrics_requires_api_key_when_enabled(make_engine):
+    with patch("app.database.create_engine", return_value=make_engine(lambda *_: StubResult())):
+        app = create_app(
+            build_test_config(
+                REQUIRE_API_KEY=True,
+                API_KEY="top-secret",
+            )
+        )
+
+    with TestClient(app) as tc:
+        unauthorized = tc.get("/metrics")
+        assert unauthorized.status_code == 401
+        assert unauthorized.json()["code"] == "UNAUTHORIZED"
+
+        authorized = tc.get("/metrics", headers={"X-API-Key": "top-secret"})
+        assert authorized.status_code == 200
+        assert "civic_archive_http_requests_total" in authorized.text
+
+
 def test_jwt_required_for_protected_endpoint(make_engine):
     secret = "jwt-test-secret-0123456789abcdef"
     now = int(time.time())

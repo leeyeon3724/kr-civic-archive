@@ -68,8 +68,6 @@ def create_app(app_config: Config | None = None) -> FastAPI:
     api.state.db_engine = db_engine
     api.state.connection_provider = connection_provider
 
-    register_observability(api)
-
     api_key_dependency = build_api_key_dependency(app_config)
     jwt_dependency = build_jwt_dependency(app_config)
     rate_limit_dependency = build_rate_limit_dependency(app_config)
@@ -78,6 +76,7 @@ def create_app(app_config: Config | None = None) -> FastAPI:
         Depends(jwt_dependency),
         Depends(rate_limit_dependency),
     ]
+    register_observability(api, metrics_dependencies=protected_dependencies)
 
     def db_health_check() -> tuple[bool, str | None]:
         try:
