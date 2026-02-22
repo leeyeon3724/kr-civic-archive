@@ -11,18 +11,6 @@
 
 ## 현재 백로그
 
-### P1. 정책 스크립트 단위 테스트 보강
-
-- 상태: `Planned`
-- 목표: 정책 검증 스크립트의 회귀 탐지력을 높입니다.
-- 작업:
-  - [ ] `scripts/check_version_consistency.py` 단위 테스트 추가
-  - [ ] `scripts/check_slo_policy.py` 단위 테스트 보강
-  - [ ] 실패 메시지/exit code 계약 테스트 추가
-- 완료 기준:
-  - [ ] 관련 스크립트 변경 시 테스트만으로 회귀를 탐지할 수 있음
-  - [ ] `docs/QUALITY_GATES.md`와 검증 경로가 일치함
-
 ### P2. 운영 런북 시나리오 템플릿 강화
 
 - 상태: `Planned`
