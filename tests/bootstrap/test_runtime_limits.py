@@ -122,3 +122,35 @@ def test_request_size_guard_rejects_oversized_streaming_body_without_reliable_co
         assert payload["details"]["max_request_body_bytes"] == 64
         assert payload["details"]["request_body_bytes"] > 64
         assert "content_length" not in payload["details"]
+
+
+def test_request_size_guard_rejects_invalid_content_length_header(make_engine):
+    with patch("app.database.create_engine", return_value=make_engine(lambda *_: StubResult())):
+        app = create_app(build_test_config(MAX_REQUEST_BODY_BYTES=64))
+
+    with TestClient(app) as tc:
+        response = tc.post(
+            "/api/echo",
+            content='{"payload":"x"}',
+            headers={"Content-Type": "application/json", "Content-Length": "invalid"},
+        )
+        assert response.status_code == 400
+        payload = response.json()
+        assert payload["code"] == "BAD_REQUEST"
+        assert payload["message"] == "Invalid Content-Length header"
+
+
+@pytest.mark.parametrize("method", ["PUT", "PATCH"])
+def test_request_size_guard_applies_to_put_and_patch_before_route_resolution(make_engine, method):
+    with patch("app.database.create_engine", return_value=make_engine(lambda *_: StubResult())):
+        app = create_app(build_test_config(MAX_REQUEST_BODY_BYTES=64))
+
+    with TestClient(app) as tc:
+        response = tc.request(
+            method,
+            "/api/echo",
+            content='{"payload":"x"}',
+            headers={"Content-Type": "application/json", "Content-Length": "invalid"},
+        )
+        assert response.status_code == 400
+        assert response.json()["code"] == "BAD_REQUEST"

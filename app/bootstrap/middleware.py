@@ -13,6 +13,37 @@ from app.config import Config
 from app.errors import error_response
 
 ReceiveMessage = MutableMapping[str, Any]
+WRITE_METHODS = frozenset({"POST", "PUT", "PATCH"})
+API_PATH_PREFIX = "/api/"
+REQUEST_SIZE_GUARD_DETAILS_ATTR = "_request_size_guard_details"
+REQUEST_RECEIVE_ATTR = "_receive"
+
+
+def _is_request_size_guard_target(request: Request) -> bool:
+    return request.url.path.startswith(API_PATH_PREFIX) and request.method in WRITE_METHODS
+
+
+def _payload_too_large_response(
+    request: Request,
+    *,
+    details: dict[str, Any],
+) -> Response:
+    return error_response(
+        request,
+        status_code=413,
+        code="PAYLOAD_TOO_LARGE",
+        message="Payload Too Large",
+        details=details,
+    )
+
+
+def _invalid_content_length_response(request: Request) -> Response:
+    return error_response(
+        request,
+        status_code=400,
+        code="BAD_REQUEST",
+        message="Invalid Content-Length header",
+    )
 
 
 def register_core_middleware(api: FastAPI, config: Config) -> None:
@@ -31,8 +62,7 @@ def register_core_middleware(api: FastAPI, config: Config) -> None:
     ) -> Response:
         request.state.request_id = request.headers.get("X-Request-Id") or getattr(request.state, "request_id", None) or str(uuid4())
 
-        guard_details_attr = "_request_size_guard_details"
-        if request.url.path.startswith("/api/") and request.method in {"POST", "PUT", "PATCH"}:
+        if _is_request_size_guard_target(request):
             max_request_body_bytes = int(config.MAX_REQUEST_BODY_BYTES)
             content_length = None
             content_length_raw = (request.headers.get("content-length") or "").strip()
@@ -40,26 +70,17 @@ def register_core_middleware(api: FastAPI, config: Config) -> None:
                 try:
                     content_length = int(content_length_raw)
                 except ValueError:
-                    return error_response(
-                        request,
-                        status_code=400,
-                        code="BAD_REQUEST",
-                        message="Invalid Content-Length header",
-                    )
+                    return _invalid_content_length_response(request)
                 if content_length > max_request_body_bytes:
-                    return error_response(
+                    return _payload_too_large_response(
                         request,
-                        status_code=413,
-                        code="PAYLOAD_TOO_LARGE",
-                        message="Payload Too Large",
                         details={
                             "max_request_body_bytes": max_request_body_bytes,
                             "content_length": content_length,
                         },
                     )
             received_bytes = 0
-            receive_attr = "_receive"
-            original_receive = cast(Callable[[], Awaitable[ReceiveMessage]], getattr(request, receive_attr))
+            original_receive = cast(Callable[[], Awaitable[ReceiveMessage]], getattr(request, REQUEST_RECEIVE_ATTR))
 
             async def guarded_receive() -> ReceiveMessage:
                 nonlocal received_bytes
@@ -76,33 +97,21 @@ def register_core_middleware(api: FastAPI, config: Config) -> None:
                     }
                     if content_length is not None:
                         overflow_details["content_length"] = content_length
-                    setattr(request.state, guard_details_attr, overflow_details)
+                    setattr(request.state, REQUEST_SIZE_GUARD_DETAILS_ATTR, overflow_details)
                     # Stop reading request body as soon as the limit is exceeded.
                     return {"type": "http.request", "body": b"", "more_body": False}
                 return message
 
-            setattr(request, receive_attr, guarded_receive)
+            setattr(request, REQUEST_RECEIVE_ATTR, guarded_receive)
         try:
             response = await call_next(request)
         except Exception:
-            guard_details = getattr(request.state, guard_details_attr, None)
+            guard_details = getattr(request.state, REQUEST_SIZE_GUARD_DETAILS_ATTR, None)
             if guard_details is not None:
-                return error_response(
-                    request,
-                    status_code=413,
-                    code="PAYLOAD_TOO_LARGE",
-                    message="Payload Too Large",
-                    details=guard_details,
-                )
+                return _payload_too_large_response(request, details=guard_details)
             raise
 
-        guard_details = getattr(request.state, guard_details_attr, None)
+        guard_details = getattr(request.state, REQUEST_SIZE_GUARD_DETAILS_ATTR, None)
         if guard_details is not None:
-            return error_response(
-                request,
-                status_code=413,
-                code="PAYLOAD_TOO_LARGE",
-                message="Payload Too Large",
-                details=guard_details,
-            )
+            return _payload_too_large_response(request, details=guard_details)
         return response
