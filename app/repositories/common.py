@@ -6,6 +6,7 @@ from typing import Any
 
 from sqlalchemy import bindparam
 
+from app.repositories.search import build_split_search_condition, build_split_search_params
 from app.repositories.session_provider import ConnectionProvider, open_connection_scope
 
 
@@ -78,6 +79,22 @@ def add_not_none_equals_filter(
         return
     conditions.append(column_expr == bindparam(param_name))
     params[param_name] = value
+
+
+def add_split_search_filter(
+    *,
+    query: str | None,
+    columns: list[Any],
+    conditions: list[Any],
+    params: dict[str, Any],
+) -> None:
+    if query is None:
+        return
+    normalized_query = query.strip()
+    if not normalized_query:
+        return
+    conditions.append(build_split_search_condition(columns=columns))
+    params.update(build_split_search_params(normalized_query))
 
 
 def execute_filtered_paginated_query(

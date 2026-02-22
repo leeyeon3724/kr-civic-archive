@@ -6,12 +6,12 @@ from sqlalchemy import bindparam, column, func, select, table, text
 
 from app.ports.dto import MinutesRecordDTO, MinutesUpsertDTO
 from app.repositories.common import (
+    add_split_search_filter,
     add_truthy_equals_filter,
     dedupe_rows_by_key,
     execute_filtered_paginated_query,
     to_json_recordset,
 )
-from app.repositories.search import build_split_search_condition, build_split_search_params
 from app.repositories.session_provider import ConnectionProvider, open_connection_scope
 
 COUNCIL_MINUTES = table(
@@ -134,23 +134,21 @@ def list_minutes(
     size: int,
     connection_provider: ConnectionProvider,
 ) -> tuple[list[MinutesRecordDTO], int]:
-    conditions = []
+    conditions: list[Any] = []
     params: dict[str, Any] = {}
 
-    normalized_q = (q or "").strip()
-    if normalized_q:
-        conditions.append(
-            build_split_search_condition(
-                columns=[
-                    COUNCIL_MINUTES.c.council,
-                    COUNCIL_MINUTES.c.committee,
-                    COUNCIL_MINUTES.c["session"],
-                    COUNCIL_MINUTES.c.content,
-                    COUNCIL_MINUTES.c.agenda,
-                ]
-            )
-        )
-        params.update(build_split_search_params(normalized_q))
+    add_split_search_filter(
+        query=q,
+        columns=[
+            COUNCIL_MINUTES.c.council,
+            COUNCIL_MINUTES.c.committee,
+            COUNCIL_MINUTES.c["session"],
+            COUNCIL_MINUTES.c.content,
+            COUNCIL_MINUTES.c.agenda,
+        ],
+        conditions=conditions,
+        params=params,
+    )
 
     for param_name, column_expr, value in (
         ("council", COUNCIL_MINUTES.c.council, council),

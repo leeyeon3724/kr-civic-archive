@@ -7,11 +7,11 @@ from sqlalchemy import bindparam, column, func, select, table, text
 from app.ports.dto import SegmentRecordDTO, SegmentUpsertDTO
 from app.repositories.common import (
     add_not_none_equals_filter,
+    add_split_search_filter,
     add_truthy_equals_filter,
     execute_filtered_paginated_query,
     to_json_recordset,
 )
-from app.repositories.search import build_split_search_condition, build_split_search_params
 from app.repositories.session_provider import ConnectionProvider, open_connection_scope
 
 COUNCIL_SPEECH_SEGMENTS = table(
@@ -165,30 +165,28 @@ def list_segments(
     size: int,
     connection_provider: ConnectionProvider,
 ) -> tuple[list[SegmentRecordDTO], int]:
-    conditions = []
+    conditions: list[Any] = []
     params: dict[str, Any] = {}
 
-    normalized_q = (q or "").strip()
-    if normalized_q:
-        conditions.append(
-            build_split_search_condition(
-                columns=[
-                    COUNCIL_SPEECH_SEGMENTS.c.council,
-                    COUNCIL_SPEECH_SEGMENTS.c.committee,
-                    COUNCIL_SPEECH_SEGMENTS.c["session"],
-                    COUNCIL_SPEECH_SEGMENTS.c.content,
-                    COUNCIL_SPEECH_SEGMENTS.c.summary,
-                    COUNCIL_SPEECH_SEGMENTS.c.subject,
-                    COUNCIL_SPEECH_SEGMENTS.c.party,
-                    COUNCIL_SPEECH_SEGMENTS.c.constituency,
-                    COUNCIL_SPEECH_SEGMENTS.c.department,
-                    COUNCIL_SPEECH_SEGMENTS.c.tag,
-                    COUNCIL_SPEECH_SEGMENTS.c.questioner,
-                    COUNCIL_SPEECH_SEGMENTS.c.answerer,
-                ]
-            )
-        )
-        params.update(build_split_search_params(normalized_q))
+    add_split_search_filter(
+        query=q,
+        columns=[
+            COUNCIL_SPEECH_SEGMENTS.c.council,
+            COUNCIL_SPEECH_SEGMENTS.c.committee,
+            COUNCIL_SPEECH_SEGMENTS.c["session"],
+            COUNCIL_SPEECH_SEGMENTS.c.content,
+            COUNCIL_SPEECH_SEGMENTS.c.summary,
+            COUNCIL_SPEECH_SEGMENTS.c.subject,
+            COUNCIL_SPEECH_SEGMENTS.c.party,
+            COUNCIL_SPEECH_SEGMENTS.c.constituency,
+            COUNCIL_SPEECH_SEGMENTS.c.department,
+            COUNCIL_SPEECH_SEGMENTS.c.tag,
+            COUNCIL_SPEECH_SEGMENTS.c.questioner,
+            COUNCIL_SPEECH_SEGMENTS.c.answerer,
+        ],
+        conditions=conditions,
+        params=params,
+    )
 
     for param_name, column_expr, value in (
         ("council", COUNCIL_SPEECH_SEGMENTS.c.council, council),

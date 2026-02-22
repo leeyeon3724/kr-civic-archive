@@ -5,8 +5,12 @@ from typing import Any, cast as typing_cast
 from sqlalchemy import Date, bindparam, cast, column, func, select, table, text
 
 from app.ports.dto import NewsArticleRecordDTO, NewsArticleUpsertDTO
-from app.repositories.common import dedupe_rows_by_key, execute_filtered_paginated_query, to_json_recordset
-from app.repositories.search import build_split_search_condition, build_split_search_params
+from app.repositories.common import (
+    add_split_search_filter,
+    dedupe_rows_by_key,
+    execute_filtered_paginated_query,
+    to_json_recordset,
+)
 from app.repositories.session_provider import ConnectionProvider, open_connection_scope
 
 NEWS_ARTICLES = table(
@@ -104,21 +108,19 @@ def list_articles(
     size: int,
     connection_provider: ConnectionProvider,
 ) -> tuple[list[NewsArticleRecordDTO], int]:
-    conditions = []
+    conditions: list[Any] = []
     params: dict[str, Any] = {}
 
-    normalized_q = (q or "").strip()
-    if normalized_q:
-        conditions.append(
-            build_split_search_condition(
-                columns=[
-                    NEWS_ARTICLES.c.title,
-                    NEWS_ARTICLES.c.summary,
-                    NEWS_ARTICLES.c.content,
-                ]
-            )
-        )
-        params.update(build_split_search_params(normalized_q))
+    add_split_search_filter(
+        query=q,
+        columns=[
+            NEWS_ARTICLES.c.title,
+            NEWS_ARTICLES.c.summary,
+            NEWS_ARTICLES.c.content,
+        ],
+        conditions=conditions,
+        params=params,
+    )
 
     if source:
         conditions.append(NEWS_ARTICLES.c.source == bindparam("source"))
