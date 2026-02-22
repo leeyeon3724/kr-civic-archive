@@ -12,11 +12,6 @@
 ## 현재 백로그
 
 - 상태: 계획
-- 항목: 인증 정책 AND/OR 정합성 확정 및 코드/문서 동기화
-  - 근거: `app/security.py`의 `build_metrics_access_dependencies` 및 API 보호 dependency 구성은 `REQUIRE_API_KEY`+`REQUIRE_JWT` 동시 설정 시 AND 동작
-  - 리스크: 운영 기대가 OR일 경우 인증 실패율 증가 및 클라이언트 호환성 저하
-  - 산출: 정책 결정(AND 또는 OR) 문서화 + `docs/API.md`/`docs/ENV.md` 정렬 + 계약 테스트 추가
-- 상태: 계획
 - 항목: 목록 API 조회/카운트 2쿼리 패턴 성능 검증 및 최적화안 도출
   - 근거: `app/repositories/common.py`의 `execute_paginated_query`가 list + count를 별도 실행
   - 리스크: 고트래픽 구간에서 DB CPU/latency(p95) 악화 가능

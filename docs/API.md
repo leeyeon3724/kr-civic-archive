@@ -33,6 +33,7 @@
 - 검증 실패는 `400 (VALIDATION_ERROR)`로 응답
 - 인증이 활성화된 경우(`REQUIRE_API_KEY=1`) `/api/*` 요청에 `X-API-Key` 헤더 필수
 - JWT 인증이 활성화된 경우(`REQUIRE_JWT=1`) `/api/*` 요청에 `Authorization: Bearer <token>` 헤더 필수
+- `REQUIRE_API_KEY=1`과 `REQUIRE_JWT=1`이 동시에 설정되면 `X-API-Key`와 `Authorization: Bearer <token>`을 모두 만족해야 함(AND 정책)
   - `JWT_SECRET`: 최소 32 bytes
   - `JWT_ALGORITHM`: 현재 `HS256`만 지원
   - 필수 클레임: `sub`, `exp`

@@ -420,6 +420,85 @@ def test_metrics_requires_api_key_when_enabled(make_engine):
         assert "civic_archive_http_requests_total" in authorized.text
 
 
+def test_protected_endpoint_requires_both_api_key_and_jwt_when_both_enabled(make_engine):
+    secret = "jwt-combined-auth-secret-0123456789abcdef"
+    now = int(time.time())
+    write_token = build_test_jwt(
+        secret,
+        {
+            "sub": "combined-auth-user",
+            "scope": "archive:write archive:read",
+            "exp": now + 300,
+        },
+    )
+
+    with patch("app.database.create_engine", return_value=make_engine(lambda *_: StubResult())):
+        app = create_app(
+            build_test_config(
+                REQUIRE_API_KEY=True,
+                API_KEY="top-secret",
+                REQUIRE_JWT=True,
+                JWT_SECRET=secret,
+            )
+        )
+
+    with TestClient(app) as tc:
+        only_api_key = tc.post("/api/echo", json={"hello": "world"}, headers={"X-API-Key": "top-secret"})
+        assert only_api_key.status_code == 401
+        assert only_api_key.json()["code"] == "UNAUTHORIZED"
+
+        only_jwt = tc.post("/api/echo", json={"hello": "world"}, headers={"Authorization": f"Bearer {write_token}"})
+        assert only_jwt.status_code == 401
+        assert only_jwt.json()["code"] == "UNAUTHORIZED"
+
+        both_headers = tc.post(
+            "/api/echo",
+            json={"hello": "world"},
+            headers={"X-API-Key": "top-secret", "Authorization": f"Bearer {write_token}"},
+        )
+        assert both_headers.status_code == 200
+        assert both_headers.json() == {"you_sent": {"hello": "world"}}
+
+
+def test_metrics_endpoint_requires_both_api_key_and_jwt_when_both_enabled(make_engine):
+    secret = "jwt-combined-metrics-secret-0123456789abcdef"
+    now = int(time.time())
+    read_token = build_test_jwt(
+        secret,
+        {
+            "sub": "combined-metrics-user",
+            "scope": "archive:read",
+            "exp": now + 300,
+        },
+    )
+
+    with patch("app.database.create_engine", return_value=make_engine(lambda *_: StubResult())):
+        app = create_app(
+            build_test_config(
+                REQUIRE_API_KEY=True,
+                API_KEY="top-secret",
+                REQUIRE_JWT=True,
+                JWT_SECRET=secret,
+            )
+        )
+
+    with TestClient(app) as tc:
+        only_api_key = tc.get("/metrics", headers={"X-API-Key": "top-secret"})
+        assert only_api_key.status_code == 401
+        assert only_api_key.json()["code"] == "UNAUTHORIZED"
+
+        only_jwt = tc.get("/metrics", headers={"Authorization": f"Bearer {read_token}"})
+        assert only_jwt.status_code == 401
+        assert only_jwt.json()["code"] == "UNAUTHORIZED"
+
+        both_headers = tc.get(
+            "/metrics",
+            headers={"X-API-Key": "top-secret", "Authorization": f"Bearer {read_token}"},
+        )
+        assert both_headers.status_code == 200
+        assert "civic_archive_http_requests_total" in both_headers.text
+
+
 def test_jwt_required_for_protected_endpoint(make_engine):
     secret = "jwt-test-secret-0123456789abcdef"
     now = int(time.time())

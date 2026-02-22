@@ -61,6 +61,8 @@ Copy-Item .env.example .env
 | `JWT_SCOPE_DELETE` | `archive:delete` | 삭제 권한 scope |
 | `JWT_ADMIN_ROLE` | `admin` | role 보유 시 scope 검사 우회 |
 
+- `REQUIRE_API_KEY=1`과 `REQUIRE_JWT=1`을 동시에 사용하면 `/api/*` 인증은 AND 정책으로 동작하며 두 헤더를 모두 요구합니다.
+
 ## 요청 제한 및 프록시
 
 | 변수 | 기본값 | 설명 |
