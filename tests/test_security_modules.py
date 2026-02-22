@@ -50,6 +50,30 @@ def test_security_proxy_client_key_ignores_xff_when_proxy_is_untrusted():
     assert client == "127.0.0.1"
 
 
+def test_security_proxy_client_key_uses_request_id_for_client_resolution_when_client_is_missing():
+    trusted_networks = security_proxy.parse_trusted_proxy_networks([])
+    request = SimpleNamespace(
+        client=None,
+        headers={"X-Request-Id": "test-request-id"},
+        state=SimpleNamespace(),
+    )
+
+    client = security_proxy.client_key(request, trusted_proxy_networks=trusted_networks)
+    assert client == "request:test-request-id"
+
+
+def test_security_proxy_client_key_uses_request_state_for_client_resolution_when_request_header_is_missing():
+    trusted_networks = security_proxy.parse_trusted_proxy_networks([])
+    request = SimpleNamespace(
+        client=None,
+        headers={},
+        state=SimpleNamespace(request_id="state-request-id"),
+    )
+
+    client = security_proxy.client_key(request, trusted_proxy_networks=trusted_networks)
+    assert client == "request:state-request-id"
+
+
 def test_security_rate_limit_builds_memory_limiter():
     limiter = security_rate_limit.build_rate_limiter(_rate_limit_config(rate_limit_backend="memory"))
     assert isinstance(limiter, security_rate_limit.InMemoryRateLimiter)

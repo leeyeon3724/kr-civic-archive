@@ -24,7 +24,16 @@ def parse_trusted_proxy_networks(cidrs: list[str]) -> list[TrustedProxyNetwork]:
 
 
 def remote_ip(request: Request) -> str:
-    return request.client.host if request.client else "unknown"
+    if request.client:
+        return request.client.host
+
+    request_id = getattr(request, "headers", {}).get("X-Request-Id") if hasattr(request, "headers") else None
+    if not request_id:
+        request_id = getattr(getattr(request, "state", None), "request_id", None)
+    if request_id:
+        return f"request:{request_id}"
+
+    return f"request:{id(request)}"
 
 
 def is_trusted_proxy(remote_ip_value: str, trusted_proxy_networks: list[TrustedProxyNetwork]) -> bool:
