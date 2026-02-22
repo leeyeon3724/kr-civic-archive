@@ -4,6 +4,7 @@ import logging
 import threading
 import time
 from collections.abc import Callable
+from collections import OrderedDict
 from typing import Any
 
 redis_module: Any | None
@@ -41,7 +42,8 @@ class InMemoryRateLimiter:
         self.requests_per_minute = max(0, requests_per_minute)
         self.window_seconds = max(1, int(window_seconds))
         self._lock = threading.Lock()
-        self._windows: dict[str, tuple[int, int]] = {}
+        self._max_window_entries = 4096
+        self._windows: OrderedDict[str, tuple[int, int]] = OrderedDict()
 
     @property
     def enabled(self) -> bool:
@@ -59,14 +61,18 @@ class InMemoryRateLimiter:
 
             count += 1
             self._windows[key] = (prev_window, count)
+            self._windows.move_to_end(key)
             self._prune(now_window)
             return count <= self.requests_per_minute
 
     def _prune(self, now_window: int) -> None:
-        if len(self._windows) < 4096:
-            return
         min_window = now_window - 1
-        self._windows = {k: v for k, v in self._windows.items() if v[0] >= min_window}
+        stale_keys = [k for k, (window, _count) in self._windows.items() if window < min_window]
+        for key in stale_keys:
+            self._windows.pop(key, None)
+
+        while len(self._windows) > self._max_window_entries:
+            self._windows.popitem(last=False)
 
 
 class RedisRateLimiter:

@@ -127,3 +127,15 @@ def test_in_memory_rate_limiter_uses_configured_window_seconds(monkeypatch):
     assert limiter.allow("client-a") is True
     assert limiter.allow("client-a") is False
     assert limiter.allow("client-a") is True
+
+
+def test_in_memory_rate_limiter_limits_tracked_window_entries(monkeypatch):
+    limiter = security_rate_limit.InMemoryRateLimiter(requests_per_minute=1000, window_seconds=60)
+    limiter._max_window_entries = 8
+
+    monkeypatch.setattr(security_rate_limit.time, "time", lambda: 120.0)
+
+    for i in range(20):
+        assert limiter.allow(f"client-{i}") is True
+
+    assert len(limiter._windows) == 8
