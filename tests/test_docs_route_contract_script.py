@@ -91,3 +91,18 @@ def test_check_debug_mode_doc_alignment_requires_reload_guidance():
         architecture_text="DEBUG mention",
     )
     assert any("uvicorn --reload" in error for error in errors)
+
+
+def test_check_pr_template_quality_alignment_accepts_required_lines():
+    module = _load_docs_contract_module()
+    pr_template_text = "\n".join(module.REQUIRED_PR_TEMPLATE_LINES)
+    assert module.check_pr_template_quality_alignment(pr_template_text) == []
+
+
+def test_check_pr_template_quality_alignment_detects_missing_line():
+    module = _load_docs_contract_module()
+    pr_template_text = "\n".join(
+        line for line in module.REQUIRED_PR_TEMPLATE_LINES if "Maintainability impact" not in line
+    )
+    errors = module.check_pr_template_quality_alignment(pr_template_text)
+    assert any("Maintainability impact" in error for error in errors)

@@ -44,6 +44,14 @@ REQUIRED_SECURITY_COMMANDS = [
     "pip-audit -r requirements.txt -r requirements-dev.txt",
     "bandit -q -r app scripts -ll",
 ]
+REQUIRED_PR_TEMPLATE_LINES = [
+    "## Quality Metrics (docs/QUALITY_METRICS.md)",
+    "- [ ] Performance impact",
+    "- [ ] Stability impact",
+    "- [ ] Reliability impact",
+    "- [ ] Maintainability impact",
+    "- [ ] Refactoring priority rationale (P0-P3) and why now",
+]
 
 
 def read_text(path: Path) -> str:
@@ -321,6 +329,14 @@ def check_debug_mode_doc_alignment(*, env_text: str, api_text: str, architecture
     return errors
 
 
+def check_pr_template_quality_alignment(pr_template_text: str) -> list[str]:
+    errors: list[str] = []
+    for required_line in REQUIRED_PR_TEMPLATE_LINES:
+        if required_line not in pr_template_text:
+            errors.append(f"[.github/pull_request_template.md] Missing required line: `{required_line}`")
+    return errors
+
+
 def main() -> int:
     route_files = discover_route_files(APP_ROOT)
     if not route_files:
@@ -335,6 +351,7 @@ def main() -> int:
     quality_gates_file = PROJECT_ROOT / "docs" / "QUALITY_GATES.md"
     contributing_file = PROJECT_ROOT / "docs" / "CONTRIBUTING.md"
     architecture_file = PROJECT_ROOT / "docs" / "ARCHITECTURE.md"
+    pr_template_file = PROJECT_ROOT / ".github" / "pull_request_template.md"
 
     for file_path in [
         readme_file,
@@ -345,6 +362,7 @@ def main() -> int:
         quality_gates_file,
         contributing_file,
         architecture_file,
+        pr_template_file,
     ]:
         if not file_path.exists():
             print(f"Required file not found: {file_path}")
@@ -359,6 +377,7 @@ def main() -> int:
     quality_gates_text = read_text(quality_gates_file)
     contributing_text = read_text(contributing_file)
     architecture_text = read_text(architecture_file)
+    pr_template_text = read_text(pr_template_file)
     env_doc_defaults = extract_env_doc_defaults(env_text)
 
     errors: list[str] = []
@@ -368,6 +387,7 @@ def main() -> int:
     errors.extend(check_env_example(env_example_text, env_doc_defaults))
     errors.extend(check_backlog_policy(backlog_text))
     errors.extend(check_security_gate_alignment(quality_gates_text, contributing_text))
+    errors.extend(check_pr_template_quality_alignment(pr_template_text))
     errors.extend(
         check_debug_mode_doc_alignment(
             env_text=env_text,
