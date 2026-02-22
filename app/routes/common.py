@@ -44,7 +44,7 @@ def normalize_ingest_payload(
 
 
 def ensure_resource_found(resource: ResourceT | None) -> ResourceT:
-    if not resource:
+    if resource is None:
         raise http_error(404, "NOT_FOUND", "Not Found")
     return resource
 

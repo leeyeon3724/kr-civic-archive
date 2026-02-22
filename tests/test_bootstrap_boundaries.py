@@ -192,6 +192,8 @@ def test_routes_common_normalize_ingest_payload_handles_single_and_list():
 
 def test_routes_common_not_found_guards():
     assert ensure_resource_found({"id": 1}) == {"id": 1}
+    assert ensure_resource_found({}) == {}
+    assert ensure_resource_found(0) == 0
 
     with pytest.raises(HTTPException) as missing_resource:
         ensure_resource_found(None)
