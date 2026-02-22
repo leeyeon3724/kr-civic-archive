@@ -80,6 +80,39 @@ def test_rate_limit_ignores_xff_when_proxy_is_untrusted(make_engine):
         assert second.json()["code"] == "RATE_LIMITED"
 
 
+def test_rate_limit_uses_ipv6_xff_when_proxy_is_trusted(make_engine):
+    with patch("app.database.create_engine", return_value=make_engine(lambda *_: StubResult())):
+        app = create_app(
+            build_test_config(
+                RATE_LIMIT_PER_MINUTE=1,
+                TRUSTED_PROXY_CIDRS="::1/128",
+            )
+        )
+
+    with patch("app.security._remote_ip", return_value="::1"), TestClient(app) as tc:
+        first = tc.post("/api/echo", json={"n": 1}, headers={"X-Forwarded-For": "2001:db8::1"})
+        second = tc.post("/api/echo", json={"n": 2}, headers={"X-Forwarded-For": "2001:db8::2"})
+        assert first.status_code == 200
+        assert second.status_code == 200
+
+
+def test_rate_limit_falls_back_when_xff_first_hop_is_invalid(make_engine):
+    with patch("app.database.create_engine", return_value=make_engine(lambda *_: StubResult())):
+        app = create_app(
+            build_test_config(
+                RATE_LIMIT_PER_MINUTE=1,
+                TRUSTED_PROXY_CIDRS="127.0.0.1/32",
+            )
+        )
+
+    with patch("app.security._remote_ip", return_value="127.0.0.1"), TestClient(app) as tc:
+        first = tc.post("/api/echo", json={"n": 1}, headers={"X-Forwarded-For": "invalid, 203.0.113.1"})
+        second = tc.post("/api/echo", json={"n": 2}, headers={"X-Forwarded-For": "bad-ip, 203.0.113.2"})
+        assert first.status_code == 200
+        assert second.status_code == 429
+        assert second.json()["code"] == "RATE_LIMITED"
+
+
 def test_invalid_trusted_proxy_cidrs_are_rejected(make_engine):
     with patch("app.database.create_engine", return_value=make_engine(lambda *_: StubResult())):
         with pytest.raises(RuntimeError):

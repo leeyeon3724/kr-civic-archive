@@ -50,6 +50,39 @@ def test_security_proxy_client_key_ignores_xff_when_proxy_is_untrusted():
     assert client == "127.0.0.1"
 
 
+def test_security_proxy_client_key_uses_first_hop_from_xff_chain():
+    trusted_networks = security_proxy.parse_trusted_proxy_networks(["127.0.0.1/32"])
+    request = SimpleNamespace(
+        client=SimpleNamespace(host="127.0.0.1"),
+        headers={"X-Forwarded-For": " 203.0.113.5 , 198.51.100.7 "},
+    )
+
+    client = security_proxy.client_key(request, trusted_proxy_networks=trusted_networks)
+    assert client == "203.0.113.5"
+
+
+def test_security_proxy_client_key_ignores_invalid_first_xff_hop():
+    trusted_networks = security_proxy.parse_trusted_proxy_networks(["127.0.0.1/32"])
+    request = SimpleNamespace(
+        client=SimpleNamespace(host="127.0.0.1"),
+        headers={"X-Forwarded-For": "unknown, 203.0.113.5"},
+    )
+
+    client = security_proxy.client_key(request, trusted_proxy_networks=trusted_networks)
+    assert client == "127.0.0.1"
+
+
+def test_security_proxy_client_key_supports_ipv6_hops():
+    trusted_networks = security_proxy.parse_trusted_proxy_networks(["::1/128"])
+    request = SimpleNamespace(
+        client=SimpleNamespace(host="::1"),
+        headers={"X-Forwarded-For": "2001:db8::1"},
+    )
+
+    client = security_proxy.client_key(request, trusted_proxy_networks=trusted_networks)
+    assert client == "2001:db8::1"
+
+
 def test_security_proxy_client_key_uses_request_id_for_client_resolution_when_client_is_missing():
     trusted_networks = security_proxy.parse_trusted_proxy_networks([])
     request = SimpleNamespace(
