@@ -10,6 +10,7 @@ from app.repositories.common import (
     add_split_search_filter,
     add_truthy_equals_filter,
     execute_filtered_paginated_query,
+    dedupe_rows_by_key,
     to_json_recordset,
 )
 from app.repositories.session_provider import ConnectionProvider, open_connection_scope
@@ -72,6 +73,8 @@ def insert_segments(
         }
         for segment in items
     ]
+    if any(segment.get("dedupe_hash") is not None for segment in payload_rows):
+        payload_rows = dedupe_rows_by_key(payload_rows, key="dedupe_hash")
 
     sql = text(
         """

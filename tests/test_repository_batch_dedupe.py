@@ -51,3 +51,36 @@ def test_minutes_upsert_batch_dedupes_same_url_with_last_item_wins(minutes_modul
     assert len(deduped_items) == 1
     assert deduped_items[0]["url"] == "https://example.com/m/1"
     assert deduped_items[0]["committee"] == "plenary"
+
+
+def test_segments_insert_batch_dedupes_same_dedupe_hash_with_last_item_wins(segments_module, make_connection_provider):
+    captured_items = {}
+
+    def handler(_statement, params):
+        parsed_items = json.loads(params["items"])
+        captured_items["payload"] = parsed_items
+        return StubResult(rows=[{"inserted": 1}])
+
+    connection_provider, _ = make_connection_provider(handler)
+    inserted = segments_module.insert_segments(
+        [
+            {
+                "council": "A",
+                "dedupe_hash": "same-key",
+                "dedupe_hash_legacy": None,
+                "content": "first",
+            },
+            {
+                "council": "A",
+                "dedupe_hash": "same-key",
+                "dedupe_hash_legacy": None,
+                "content": "second",
+            },
+        ],
+        connection_provider=connection_provider,
+    )
+
+    assert inserted == 1
+    deduped_items = captured_items["payload"]
+    assert len(deduped_items) == 1
+    assert deduped_items[0]["content"] == "second"
