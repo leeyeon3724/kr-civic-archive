@@ -92,19 +92,38 @@ def test_security_proxy_client_key_uses_request_id_for_client_resolution_when_cl
     )
 
     client = security_proxy.client_key(request, trusted_proxy_networks=trusted_networks)
-    assert client == "request:test-request-id"
+    assert client == "request-id:test-request-id"
 
 
-def test_security_proxy_client_key_uses_request_state_for_client_resolution_when_request_header_is_missing():
+def test_security_proxy_client_key_uses_unknown_fallback_when_client_is_missing_and_no_headers():
+    trusted_networks = security_proxy.parse_trusted_proxy_networks([])
+    first_request = SimpleNamespace(
+        client=None,
+        headers={},
+        state=SimpleNamespace(request_id="state-request-id-1"),
+    )
+    second_request = SimpleNamespace(
+        client=None,
+        headers={},
+        state=SimpleNamespace(request_id="state-request-id-2"),
+    )
+
+    first_client = security_proxy.client_key(first_request, trusted_proxy_networks=trusted_networks)
+    second_client = security_proxy.client_key(second_request, trusted_proxy_networks=trusted_networks)
+    assert first_client == "request:unknown"
+    assert second_client == "request:unknown"
+
+
+def test_security_proxy_client_key_uses_x_real_ip_when_client_is_missing():
     trusted_networks = security_proxy.parse_trusted_proxy_networks([])
     request = SimpleNamespace(
         client=None,
-        headers={},
-        state=SimpleNamespace(request_id="state-request-id"),
+        headers={"X-Real-IP": "198.51.100.50"},
+        state=SimpleNamespace(),
     )
 
     client = security_proxy.client_key(request, trusted_proxy_networks=trusted_networks)
-    assert client == "request:state-request-id"
+    assert client == "198.51.100.50"
 
 
 def test_security_rate_limit_builds_memory_limiter():

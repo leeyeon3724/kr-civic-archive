@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from ipaddress import IPv4Network, IPv6Network, ip_address, ip_network
 
 from fastapi import Request
@@ -23,17 +23,41 @@ def parse_trusted_proxy_networks(cidrs: list[str]) -> list[TrustedProxyNetwork]:
     return networks
 
 
+def _first_valid_forwarded_ip(headers: Mapping[str, str]) -> str | None:
+    forwarded_for = (headers.get("X-Forwarded-For") or "").strip()
+    if forwarded_for:
+        first_hop = forwarded_for.split(",")[0].strip()
+        if first_hop:
+            try:
+                ip_address(first_hop)
+                return first_hop
+            except ValueError:
+                pass
+
+    real_ip = (headers.get("X-Real-IP") or "").strip()
+    if real_ip:
+        try:
+            ip_address(real_ip)
+            return real_ip
+        except ValueError:
+            pass
+    return None
+
+
 def remote_ip(request: Request) -> str:
     if request.client:
         return request.client.host
 
-    request_id = getattr(request, "headers", {}).get("X-Request-Id") if hasattr(request, "headers") else None
-    if not request_id:
-        request_id = getattr(getattr(request, "state", None), "request_id", None)
-    if request_id:
-        return f"request:{request_id}"
+    headers: Mapping[str, str] = getattr(request, "headers", {}) if hasattr(request, "headers") else {}
+    forwarded_ip = _first_valid_forwarded_ip(headers)
+    if forwarded_ip:
+        return forwarded_ip
 
-    return f"request:{id(request)}"
+    request_id = headers.get("X-Request-Id")
+    if not request_id:
+        return "request:unknown"
+
+    return f"request-id:{request_id}"
 
 
 def is_trusted_proxy(remote_ip_value: str, trusted_proxy_networks: list[TrustedProxyNetwork]) -> bool:

@@ -113,6 +113,23 @@ def test_rate_limit_falls_back_when_xff_first_hop_is_invalid(make_engine):
         assert second.json()["code"] == "RATE_LIMITED"
 
 
+def test_rate_limit_uses_stable_fallback_key_when_remote_ip_is_unavailable(make_engine):
+    with patch("app.database.create_engine", return_value=make_engine(lambda *_: StubResult())):
+        app = create_app(
+            build_test_config(
+                RATE_LIMIT_PER_MINUTE=1,
+                TRUSTED_PROXY_CIDRS="127.0.0.1/32",
+            )
+        )
+
+    with patch("app.security._remote_ip", return_value="request:unknown"), TestClient(app) as tc:
+        first = tc.post("/api/echo", json={"n": 1}, headers={"X-Request-Id": "req-1"})
+        second = tc.post("/api/echo", json={"n": 2}, headers={"X-Request-Id": "req-2"})
+        assert first.status_code == 200
+        assert second.status_code == 429
+        assert second.json()["code"] == "RATE_LIMITED"
+
+
 def test_invalid_trusted_proxy_cidrs_are_rejected(make_engine):
     with patch("app.database.create_engine", return_value=make_engine(lambda *_: StubResult())):
         with pytest.raises(RuntimeError):
