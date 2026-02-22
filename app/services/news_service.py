@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datetime import date, datetime
 from typing import cast
 
 from app.ports.dto import NewsArticleRecordDTO, NewsArticleUpsertDTO
@@ -8,22 +7,14 @@ from app.ports.repositories import NewsRepositoryPort
 from app.ports.services import NewsServicePort
 from app.repositories.news_repository import NewsRepository
 from app.repositories.session_provider import ConnectionProvider, ensure_connection_provider
-from app.utils import bad_request, normalize_date_filter, normalize_optional_str, normalize_pagination, parse_datetime
-
-
-def _optional_str(value: object) -> str | None:
-    if value is None:
-        return None
-    if not isinstance(value, str):
-        return None
-    stripped = value.strip()
-    return stripped or None
-
-
-def _as_datetime_input(value: object) -> str | datetime | date | None:
-    if value is None or isinstance(value, (str, datetime, date)):
-        return value
-    raise bad_request(f"published_at format error: {value}")
+from app.utils import (
+    bad_request,
+    ensure_temporal_input,
+    normalize_date_filter,
+    normalize_optional_str,
+    normalize_pagination,
+    parse_datetime,
+)
 
 
 def _normalize_article(item: dict[str, object]) -> NewsArticleUpsertDTO:
@@ -36,13 +27,18 @@ def _normalize_article(item: dict[str, object]) -> NewsArticleUpsertDTO:
         raise bad_request("Missing required fields: title, url")
 
     return {
-        "source": _optional_str(item.get("source")),
+        "source": normalize_optional_str(item.get("source")),
         "title": title.strip(),
         "url": url.strip(),
-        "published_at": parse_datetime(_as_datetime_input(item.get("published_at"))),
-        "author": _optional_str(item.get("author")),
-        "summary": _optional_str(item.get("summary")),
-        "content": _optional_str(item.get("content")),
+        "published_at": parse_datetime(
+            ensure_temporal_input(
+                item.get("published_at"),
+                error_message="published_at format error: {value}",
+            )
+        ),
+        "author": normalize_optional_str(item.get("author")),
+        "summary": normalize_optional_str(item.get("summary")),
+        "content": normalize_optional_str(item.get("content")),
         "keywords": item.get("keywords"),
     }
 

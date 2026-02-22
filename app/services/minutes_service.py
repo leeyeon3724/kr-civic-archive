@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datetime import date, datetime
 from typing import cast
 
 from app.ports.dto import MinutesRecordDTO, MinutesUpsertDTO
@@ -12,26 +11,12 @@ from app.utils import (
     bad_request,
     coerce_meeting_no_int,
     combine_meeting_no,
+    ensure_temporal_input,
     normalize_date_filter,
     normalize_optional_str,
     normalize_pagination,
     parse_date,
 )
-
-
-def _optional_str(value: object) -> str | None:
-    if value is None:
-        return None
-    if not isinstance(value, str):
-        return None
-    stripped = value.strip()
-    return stripped or None
-
-
-def _as_date_input(value: object) -> str | datetime | date | None:
-    if value is None or isinstance(value, (str, datetime, date)):
-        return value
-    raise bad_request(f"meeting_date format error (YYYY-MM-DD): {value}")
 
 
 def _normalize_minutes(item: dict[str, object]) -> MinutesUpsertDTO:
@@ -43,21 +28,26 @@ def _normalize_minutes(item: dict[str, object]) -> MinutesUpsertDTO:
     if not isinstance(council, str) or not council.strip() or not isinstance(url, str) or not url.strip():
         raise bad_request("Missing required fields: council, url")
 
-    session = _optional_str(item.get("session"))
+    session = normalize_optional_str(item.get("session"))
     meeting_no_raw = item.get("meeting_no")
     meeting_no_int = coerce_meeting_no_int(meeting_no_raw)
 
-    meeting_date = parse_date(_as_date_input(item.get("meeting_date")))
+    meeting_date = parse_date(
+        ensure_temporal_input(
+            item.get("meeting_date"),
+            error_message="meeting_date format error (YYYY-MM-DD): {value}",
+        )
+    )
 
     return {
         "council": council.strip(),
-        "committee": _optional_str(item.get("committee")),
+        "committee": normalize_optional_str(item.get("committee")),
         "session": session,
         "meeting_no": meeting_no_int,
         "meeting_no_combined": combine_meeting_no(session, meeting_no_raw, meeting_no_int),
         "url": url.strip(),
         "meeting_date": meeting_date.date() if meeting_date else None,
-        "content": _optional_str(item.get("content")),
+        "content": normalize_optional_str(item.get("content")),
         "tag": item.get("tag"),
         "attendee": item.get("attendee"),
         "agenda": item.get("agenda"),

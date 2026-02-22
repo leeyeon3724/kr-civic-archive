@@ -20,6 +20,12 @@ def normalize_optional_str(value: object) -> str | None:
     return stripped or None
 
 
+def ensure_temporal_input(value: object, *, error_message: str) -> str | datetime | date | None:
+    if value is None or isinstance(value, (str, datetime, date)):
+        return value
+    raise bad_request(error_message.format(value=value))
+
+
 def parse_datetime(dt: str | datetime | date | None) -> datetime | None:
     try:
         return parse_datetime_value(dt)

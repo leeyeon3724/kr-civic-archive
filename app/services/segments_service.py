@@ -14,6 +14,7 @@ from app.utils import (
     bad_request,
     coerce_meeting_no_int,
     combine_meeting_no,
+    ensure_temporal_input,
     normalize_date_filter,
     normalize_optional_str,
     normalize_pagination,
@@ -31,22 +32,6 @@ LEGACY_EMPTY_STRING_FIELDS: tuple[str, ...] = (
     "constituency",
     "department",
 )
-
-
-def _optional_str(value: object) -> str | None:
-    if value is None:
-        return None
-    if not isinstance(value, str):
-        return None
-    stripped = value.strip()
-    return stripped or None
-
-
-def _as_date_input(value: object) -> str | datetime | date | None:
-    if value is None or isinstance(value, (str, datetime, date)):
-        return value
-    raise bad_request(f"meeting_date format error (YYYY-MM-DD): {value}")
-
 
 def _canonical_json_value(value: object) -> object:
     if isinstance(value, datetime):
@@ -102,30 +87,35 @@ def _normalize_segment(item: dict[str, object]) -> SegmentUpsertDTO:
     if not isinstance(council, str) or not council.strip():
         raise bad_request("Missing required field: council")
 
-    session = _optional_str(item.get("session"))
+    session = normalize_optional_str(item.get("session"))
     meeting_no_raw = item.get("meeting_no")
     meeting_no_int = coerce_meeting_no_int(meeting_no_raw)
 
-    meeting_date = parse_date(_as_date_input(item.get("meeting_date")))
+    meeting_date = parse_date(
+        ensure_temporal_input(
+            item.get("meeting_date"),
+            error_message="meeting_date format error (YYYY-MM-DD): {value}",
+        )
+    )
 
     normalized: SegmentUpsertDTO = {
         "council": council.strip(),
-        "committee": _optional_str(item.get("committee")),
+        "committee": normalize_optional_str(item.get("committee")),
         "session": session,
         "meeting_no": meeting_no_int,
         "meeting_no_combined": combine_meeting_no(session, meeting_no_raw, meeting_no_int),
         "meeting_date": meeting_date.date() if meeting_date else None,
-        "content": _optional_str(item.get("content")),
-        "summary": _optional_str(item.get("summary")),
-        "subject": _optional_str(item.get("subject")),
+        "content": normalize_optional_str(item.get("content")),
+        "summary": normalize_optional_str(item.get("summary")),
+        "subject": normalize_optional_str(item.get("subject")),
         "tag": item.get("tag"),
         "importance": parse_importance_value(item.get("importance"), required=False),
         "moderator": item.get("moderator"),
         "questioner": item.get("questioner"),
         "answerer": item.get("answerer"),
-        "party": _optional_str(item.get("party")),
-        "constituency": _optional_str(item.get("constituency")),
-        "department": _optional_str(item.get("department")),
+        "party": normalize_optional_str(item.get("party")),
+        "constituency": normalize_optional_str(item.get("constituency")),
+        "department": normalize_optional_str(item.get("department")),
         "dedupe_hash": "",
         "dedupe_hash_legacy": None,
     }
