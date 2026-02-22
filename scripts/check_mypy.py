@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run mypy for project phase-1 typed scope."""
+"""Run mypy for project typed scope."""
 
 from __future__ import annotations
 
@@ -42,7 +42,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--targets",
         nargs="*",
         default=None,
-        help="Optional explicit targets. Defaults to phase-1 target set.",
+        help="Optional explicit targets. Defaults to project target set.",
     )
     return parser
 
