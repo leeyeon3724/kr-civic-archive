@@ -16,11 +16,6 @@
   - 근거: 현재는 첫 페이지 미만 결과에서만 count 생략 최적화가 적용되며, 고부하 구간에서는 여전히 list/count 분리 실행
   - 리스크: 대규모 데이터셋 + 복합 필터에서 count query가 p95 병목으로 남을 수 있음
   - 산출: `scripts/analyze_total_strategy.py` 결과를 기반으로 offset별 split/window 전략 비교 리포트 작성
-- 상태: 진행 중
-- 항목: 테스트 디렉토리 구조 정리 및 초대형 테스트 파일 분할(2차)
-  - 근거: `tests/security/test_auth_runtime.py`, `tests/security/test_rate_limit_runtime.py`로 인증/요청제한 시나리오를 분리했지만, `tests/test_app_baseline.py`는 여전히 499라인
-  - 리스크: 단일 파일 내 회귀 분석 난이도와 변경 충돌 위험이 여전히 높음
-  - 산출: `tests/test_app_baseline.py`의 payload-guard/observability/DB runtime 튜닝 블록을 도메인 테스트 파일로 추가 분할
 
 ## 운영 메모
 
