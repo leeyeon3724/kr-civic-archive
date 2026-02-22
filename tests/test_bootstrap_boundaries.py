@@ -14,7 +14,12 @@ from app.bootstrap.routes import register_domain_routes
 from app.bootstrap.system_routes import register_system_routes
 from app.bootstrap.validation import validate_startup_config
 from app import create_app
-from app.routes.common import to_date_filter
+from app.routes.common import (
+    ensure_delete_succeeded,
+    ensure_resource_found,
+    normalize_ingest_payload,
+    to_date_filter,
+)
 
 
 def test_validation_module_rejects_invalid_rate_limit_backend():
@@ -168,3 +173,32 @@ def test_exception_handlers_module_normalizes_errors():
 def test_routes_common_date_filter_normalizes_optional_values():
     assert to_date_filter(None) is None
     assert to_date_filter(date(2026, 2, 22)) == "2026-02-22"
+
+
+def test_routes_common_normalize_ingest_payload_handles_single_and_list():
+    config = build_test_config(INGEST_MAX_BATCH_ITEMS=2)
+    request = type("Req", (), {"app": type("App", (), {"state": type("State", (), {"config": config})()})()})()
+
+    single = normalize_ingest_payload(request, {"id": 1})
+    assert single == [{"id": 1}]
+
+    multiple = normalize_ingest_payload(request, [{"id": 1}, {"id": 2}])
+    assert multiple == [{"id": 1}, {"id": 2}]
+
+    with pytest.raises(HTTPException) as exc_info:
+        normalize_ingest_payload(request, [{"id": 1}, {"id": 2}, {"id": 3}])
+    assert exc_info.value.status_code == 413
+
+
+def test_routes_common_not_found_guards():
+    assert ensure_resource_found({"id": 1}) == {"id": 1}
+
+    with pytest.raises(HTTPException) as missing_resource:
+        ensure_resource_found(None)
+    assert missing_resource.value.status_code == 404
+
+    ensure_delete_succeeded(True)
+
+    with pytest.raises(HTTPException) as delete_failed:
+        ensure_delete_succeeded(False)
+    assert delete_failed.value.status_code == 404

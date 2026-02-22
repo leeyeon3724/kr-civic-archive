@@ -2,10 +2,15 @@ from datetime import date
 
 from fastapi import APIRouter, Body, Depends, Query, Request
 
-from app.errors import http_error
 from app.ports.dto import NewsArticleUpsertDTO
 from app.ports.services import NewsServicePort
-from app.routes.common import ERROR_RESPONSES, enforce_ingest_batch_limit, to_date_filter
+from app.routes.common import (
+    ERROR_RESPONSES,
+    ensure_delete_succeeded,
+    ensure_resource_found,
+    normalize_ingest_payload,
+    to_date_filter,
+)
 from app.schemas import (
     DeleteResponse,
     NewsItemBase,
@@ -53,8 +58,7 @@ def save_news(
     ),
     service: NewsServicePort = Depends(get_news_service),
 ) -> UpsertResponse:
-    payload_items = payload if isinstance(payload, list) else [payload]
-    enforce_ingest_batch_limit(request, len(payload_items))
+    payload_items = normalize_ingest_payload(request, payload)
     items: list[NewsArticleUpsertDTO] = [service.normalize_article(item.model_dump()) for item in payload_items]
     inserted, updated = service.upsert_articles(items)
     return UpsertResponse(inserted=inserted, updated=updated)
@@ -94,9 +98,7 @@ def list_news(
     responses=ERROR_RESPONSES,
 )
 def get_news(item_id: int, service: NewsServicePort = Depends(get_news_service)) -> NewsItemDetail:
-    row = service.get_article(item_id)
-    if not row:
-        raise http_error(404, "NOT_FOUND", "Not Found")
+    row = ensure_resource_found(service.get_article(item_id))
     return NewsItemDetail.model_validate(row)
 
 
@@ -107,7 +109,5 @@ def get_news(item_id: int, service: NewsServicePort = Depends(get_news_service))
     responses=ERROR_RESPONSES,
 )
 def delete_news(item_id: int, service: NewsServicePort = Depends(get_news_service)) -> DeleteResponse:
-    deleted = service.delete_article(item_id)
-    if not deleted:
-        raise http_error(404, "NOT_FOUND", "Not Found")
+    ensure_delete_succeeded(service.delete_article(item_id))
     return DeleteResponse(status="deleted", id=item_id)

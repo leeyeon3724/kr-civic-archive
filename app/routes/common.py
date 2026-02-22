@@ -1,5 +1,5 @@
 from datetime import date
-from typing import Any
+from typing import Any, TypeVar
 
 from fastapi import Request
 
@@ -28,6 +28,30 @@ def enforce_ingest_batch_limit(request: Request, batch_size: int) -> None:
             "Payload Too Large",
             details={"max_batch_items": limit, "received_batch_items": int(batch_size)},
         )
+
+
+PayloadItemT = TypeVar("PayloadItemT")
+ResourceT = TypeVar("ResourceT")
+
+
+def normalize_ingest_payload(
+    request: Request,
+    payload: PayloadItemT | list[PayloadItemT],
+) -> list[PayloadItemT]:
+    payload_items = payload if isinstance(payload, list) else [payload]
+    enforce_ingest_batch_limit(request, len(payload_items))
+    return payload_items
+
+
+def ensure_resource_found(resource: ResourceT | None) -> ResourceT:
+    if not resource:
+        raise http_error(404, "NOT_FOUND", "Not Found")
+    return resource
+
+
+def ensure_delete_succeeded(deleted: bool) -> None:
+    if not deleted:
+        raise http_error(404, "NOT_FOUND", "Not Found")
 
 
 def to_date_filter(value: date | None) -> str | None:

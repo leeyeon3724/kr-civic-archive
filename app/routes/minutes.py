@@ -2,10 +2,15 @@ from datetime import date
 
 from fastapi import APIRouter, Body, Depends, Query, Request
 
-from app.errors import http_error
 from app.ports.dto import MinutesUpsertDTO
 from app.ports.services import MinutesServicePort
-from app.routes.common import ERROR_RESPONSES, enforce_ingest_batch_limit, to_date_filter
+from app.routes.common import (
+    ERROR_RESPONSES,
+    ensure_delete_succeeded,
+    ensure_resource_found,
+    normalize_ingest_payload,
+    to_date_filter,
+)
 from app.schemas import (
     DeleteResponse,
     MinutesItemBase,
@@ -43,8 +48,7 @@ def save_minutes(
     ),
     service: MinutesServicePort = Depends(get_minutes_service),
 ) -> UpsertResponse:
-    payload_items = payload if isinstance(payload, list) else [payload]
-    enforce_ingest_batch_limit(request, len(payload_items))
+    payload_items = normalize_ingest_payload(request, payload)
     items: list[MinutesUpsertDTO] = [service.normalize_minutes(item.model_dump()) for item in payload_items]
     inserted, updated = service.upsert_minutes(items)
     return UpsertResponse(inserted=inserted, updated=updated)
@@ -95,9 +99,7 @@ def list_minutes(
     responses=ERROR_RESPONSES,
 )
 def get_minutes(item_id: int, service: MinutesServicePort = Depends(get_minutes_service)) -> MinutesItemDetail:
-    row = service.get_minutes(item_id)
-    if not row:
-        raise http_error(404, "NOT_FOUND", "Not Found")
+    row = ensure_resource_found(service.get_minutes(item_id))
     return MinutesItemDetail.model_validate(row)
 
 
@@ -108,7 +110,5 @@ def get_minutes(item_id: int, service: MinutesServicePort = Depends(get_minutes_
     responses=ERROR_RESPONSES,
 )
 def delete_minutes(item_id: int, service: MinutesServicePort = Depends(get_minutes_service)) -> DeleteResponse:
-    deleted = service.delete_minutes(item_id)
-    if not deleted:
-        raise http_error(404, "NOT_FOUND", "Not Found")
+    ensure_delete_succeeded(service.delete_minutes(item_id))
     return DeleteResponse(status="deleted", id=item_id)

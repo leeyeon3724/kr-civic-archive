@@ -2,10 +2,15 @@ from datetime import date
 
 from fastapi import APIRouter, Body, Depends, Query, Request
 
-from app.errors import http_error
 from app.ports.dto import SegmentUpsertDTO
 from app.ports.services import SegmentsServicePort
-from app.routes.common import ERROR_RESPONSES, enforce_ingest_batch_limit, to_date_filter
+from app.routes.common import (
+    ERROR_RESPONSES,
+    ensure_delete_succeeded,
+    ensure_resource_found,
+    normalize_ingest_payload,
+    to_date_filter,
+)
 from app.schemas import (
     DeleteResponse,
     InsertResponse,
@@ -44,8 +49,7 @@ def save_segments(
     ),
     service: SegmentsServicePort = Depends(get_segments_service),
 ) -> InsertResponse:
-    payload_items = payload if isinstance(payload, list) else [payload]
-    enforce_ingest_batch_limit(request, len(payload_items))
+    payload_items = normalize_ingest_payload(request, payload)
     items: list[SegmentUpsertDTO] = [service.normalize_segment(item.model_dump()) for item in payload_items]
     inserted = service.insert_segments(items)
     return InsertResponse(inserted=inserted)
@@ -104,9 +108,7 @@ def list_segments(
     responses=ERROR_RESPONSES,
 )
 def get_segment(item_id: int, service: SegmentsServicePort = Depends(get_segments_service)) -> SegmentsItemDetail:
-    row = service.get_segment(item_id)
-    if not row:
-        raise http_error(404, "NOT_FOUND", "Not Found")
+    row = ensure_resource_found(service.get_segment(item_id))
     return SegmentsItemDetail.model_validate(row)
 
 
@@ -117,7 +119,5 @@ def get_segment(item_id: int, service: SegmentsServicePort = Depends(get_segment
     responses=ERROR_RESPONSES,
 )
 def delete_segment(item_id: int, service: SegmentsServicePort = Depends(get_segments_service)) -> DeleteResponse:
-    deleted = service.delete_segment(item_id)
-    if not deleted:
-        raise http_error(404, "NOT_FOUND", "Not Found")
+    ensure_delete_succeeded(service.delete_segment(item_id))
     return DeleteResponse(status="deleted", id=item_id)
