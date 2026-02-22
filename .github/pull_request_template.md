@@ -12,6 +12,10 @@
 - [ ] Maintainability impact (coverage, mypy, docs policy/script regression risk)
 - [ ] Refactoring priority rationale (P0-P3) and why now
 
+## Policy Alignment (docs/GUARDRAILS.md)
+- [ ] Security/runtime policy docs sync (`docs/API.md`, `docs/ENV.md`, `docs/ARCHITECTURE.md`, `docs/OPERATIONS.md`)
+- [ ] Contextual guard command set reviewed (local/PR/release/incident)
+
 ## Validation
 - [ ] `python -m ruff check app tests scripts`
 - [ ] `python scripts/check_mypy.py`

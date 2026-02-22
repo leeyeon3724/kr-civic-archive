@@ -56,6 +56,7 @@ PR 본문에 아래 항목을 포함합니다.
 ## 머지 전 필수 검증
 
 공통 게이트는 `docs/QUALITY_GATES.md`를 기준으로 실행합니다.
+문맥별 실행 순서(로컬/PR/릴리스/장애)는 `docs/GUARDRAILS.md`를 기준으로 적용합니다.
 
 - 필수: `python scripts/check_commit_messages.py --rev-range origin/main..HEAD --mode fail`
 - 필수: `docs/QUALITY_GATES.md`의 기본 게이트 전부 통과

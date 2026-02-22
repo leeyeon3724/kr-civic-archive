@@ -91,6 +91,8 @@ def test_check_debug_mode_doc_alignment_requires_reload_guidance():
         architecture_text="DEBUG mention",
     )
     assert any("uvicorn --reload" in error for error in errors)
+    assert any("SECURITY_STRICT_MODE" in error for error in errors)
+    assert any("APP_ENV=production" in error for error in errors)
 
 
 def test_check_pr_template_quality_alignment_accepts_required_lines():
@@ -106,3 +108,22 @@ def test_check_pr_template_quality_alignment_detects_missing_line():
     )
     errors = module.check_pr_template_quality_alignment(pr_template_text)
     assert any("Maintainability impact" in error for error in errors)
+
+
+def test_check_guardrails_doc_accepts_required_structure():
+    module = _load_docs_contract_module()
+    text = "\n".join(module.REQUIRED_GUARDRAILS_HEADINGS) + """
+check_commit_messages.py
+check_runtime_health.py
+benchmark_queries.py
+check_quality_metrics.py
+allow-ready-degraded
+"""
+    assert module.check_guardrails_doc(text) == []
+
+
+def test_check_guardrails_doc_detects_missing_heading():
+    module = _load_docs_contract_module()
+    text = "## Local/CI Baseline"
+    errors = module.check_guardrails_doc(text)
+    assert any("PR Context" in error for error in errors)

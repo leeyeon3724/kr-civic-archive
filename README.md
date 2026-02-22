@@ -70,6 +70,7 @@ python -m alembic downgrade -1
 - 아키텍처/설계: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 - 환경 변수: [docs/ENV.md](docs/ENV.md)
 - 품질 게이트: [docs/QUALITY_GATES.md](docs/QUALITY_GATES.md)
+- 문맥별 가드 정책: [docs/GUARDRAILS.md](docs/GUARDRAILS.md)
 - 품질 지표: [docs/QUALITY_METRICS.md](docs/QUALITY_METRICS.md)
 - 성능 정책: [docs/PERFORMANCE.md](docs/PERFORMANCE.md)
 - SLO 정책: [docs/SLO.md](docs/SLO.md)

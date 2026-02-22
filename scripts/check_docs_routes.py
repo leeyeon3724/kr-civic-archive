@@ -18,6 +18,7 @@ REQUIRED_README_LINKS = [
     "docs/ARCHITECTURE.md",
     "docs/ENV.md",
     "docs/QUALITY_GATES.md",
+    "docs/GUARDRAILS.md",
     "docs/QUALITY_METRICS.md",
     "docs/BACKLOG.md",
 ]
@@ -51,6 +52,22 @@ REQUIRED_PR_TEMPLATE_LINES = [
     "- [ ] Reliability impact",
     "- [ ] Maintainability impact",
     "- [ ] Refactoring priority rationale (P0-P3) and why now",
+    "## Policy Alignment (docs/GUARDRAILS.md)",
+    "- [ ] Security/runtime policy docs sync",
+    "- [ ] Contextual guard command set reviewed (local/PR/release/incident)",
+]
+REQUIRED_GUARDRAILS_HEADINGS = [
+    "## Local/CI Baseline",
+    "## PR Context",
+    "## Release Context",
+    "## Incident/Degraded Context",
+]
+REQUIRED_GUARDRAILS_PATTERNS = [
+    re.compile(r"check_commit_messages\.py"),
+    re.compile(r"check_runtime_health\.py"),
+    re.compile(r"benchmark_queries\.py"),
+    re.compile(r"check_quality_metrics\.py"),
+    re.compile(r"allow-ready-degraded"),
 ]
 
 
@@ -316,6 +333,7 @@ def check_security_gate_alignment(quality_gates_text: str, contributing_text: st
 def check_debug_mode_doc_alignment(*, env_text: str, api_text: str, architecture_text: str) -> list[str]:
     errors: list[str] = []
     required_hint = "uvicorn --reload"
+    required_terms = ["SECURITY_STRICT_MODE", "APP_ENV=production"]
     documents = [
         ("docs/ENV.md", env_text),
         ("docs/API.md", api_text),
@@ -326,6 +344,9 @@ def check_debug_mode_doc_alignment(*, env_text: str, api_text: str, architecture
             errors.append(f"[{doc_name}] Missing DEBUG guidance.")
         if required_hint not in text:
             errors.append(f"[{doc_name}] Missing DEBUG reload guidance: `{required_hint}`.")
+        for term in required_terms:
+            if term not in text:
+                errors.append(f"[{doc_name}] Missing strict-mode guidance keyword: `{term}`.")
     return errors
 
 
@@ -334,6 +355,17 @@ def check_pr_template_quality_alignment(pr_template_text: str) -> list[str]:
     for required_line in REQUIRED_PR_TEMPLATE_LINES:
         if required_line not in pr_template_text:
             errors.append(f"[.github/pull_request_template.md] Missing required line: `{required_line}`")
+    return errors
+
+
+def check_guardrails_doc(guardrails_text: str) -> list[str]:
+    errors: list[str] = []
+    for heading in REQUIRED_GUARDRAILS_HEADINGS:
+        if heading not in guardrails_text:
+            errors.append(f"[docs/GUARDRAILS.md] Missing required heading: `{heading}`")
+    for pattern in REQUIRED_GUARDRAILS_PATTERNS:
+        if not pattern.search(guardrails_text):
+            errors.append(f"[docs/GUARDRAILS.md] Missing required guardrail pattern: `{pattern.pattern}`")
     return errors
 
 
@@ -349,6 +381,7 @@ def main() -> int:
     backlog_file = PROJECT_ROOT / "docs" / "BACKLOG.md"
     env_example_file = PROJECT_ROOT / ".env.example"
     quality_gates_file = PROJECT_ROOT / "docs" / "QUALITY_GATES.md"
+    guardrails_file = PROJECT_ROOT / "docs" / "GUARDRAILS.md"
     contributing_file = PROJECT_ROOT / "docs" / "CONTRIBUTING.md"
     architecture_file = PROJECT_ROOT / "docs" / "ARCHITECTURE.md"
     pr_template_file = PROJECT_ROOT / ".github" / "pull_request_template.md"
@@ -360,6 +393,7 @@ def main() -> int:
         backlog_file,
         env_example_file,
         quality_gates_file,
+        guardrails_file,
         contributing_file,
         architecture_file,
         pr_template_file,
@@ -375,6 +409,7 @@ def main() -> int:
     env_example_text = read_text(env_example_file)
     backlog_text = read_text(backlog_file)
     quality_gates_text = read_text(quality_gates_file)
+    guardrails_text = read_text(guardrails_file)
     contributing_text = read_text(contributing_file)
     architecture_text = read_text(architecture_file)
     pr_template_text = read_text(pr_template_file)
@@ -387,6 +422,7 @@ def main() -> int:
     errors.extend(check_env_example(env_example_text, env_doc_defaults))
     errors.extend(check_backlog_policy(backlog_text))
     errors.extend(check_security_gate_alignment(quality_gates_text, contributing_text))
+    errors.extend(check_guardrails_doc(guardrails_text))
     errors.extend(check_pr_template_quality_alignment(pr_template_text))
     errors.extend(
         check_debug_mode_doc_alignment(
