@@ -32,3 +32,4 @@ def test_health_ready_returns_503_when_any_check_fails(client, monkeypatch, use_
     assert payload["status"] == "degraded"
     assert payload["checks"]["database"]["ok"] is False
     assert payload["checks"]["rate_limit_backend"]["ok"] is False
+    assert payload["checks"]["database"]["detail"] == "database connection failed"

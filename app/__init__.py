@@ -84,7 +84,8 @@ def create_app(app_config: Config | None = None) -> FastAPI:
                 conn.execute(text("SELECT 1"))
             return True, None
         except Exception as exc:
-            return False, str(exc)
+            logger.exception("health_db_check_failed", extra={"error": type(exc).__name__})
+            return False, "database connection failed"
 
     register_domain_routes(api, protected_dependencies=protected_dependencies)
     register_system_routes(
