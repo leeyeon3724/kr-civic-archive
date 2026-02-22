@@ -53,7 +53,16 @@ def test_check_with_retry_fails_after_exhausting_retries(monkeypatch):
 
 def test_check_with_retry_accepts_ready_degraded_when_enabled(monkeypatch):
     responses = [
-        (503, {"status": "degraded", "checks": {"database": {"ok": False}}}),
+        (
+            503,
+            {
+                "status": "degraded",
+                "checks": {
+                    "database": {"ok": False, "detail": "db down"},
+                    "rate_limit_backend": {"ok": True, "detail": None},
+                },
+            },
+        ),
     ]
 
     def fake_http_get_json(_url: str, _timeout: float):
@@ -102,3 +111,45 @@ def test_validate_health_payload_for_live_non_json_body():
     ok, reason = runtime_health._validate_health_payload(name="live", status=200, body="plain-text")
     assert ok is False
     assert "JSON object" in str(reason)
+
+
+def test_validate_health_payload_ready_requires_all_required_checks():
+    ok, reason = runtime_health._validate_health_payload(
+        name="ready",
+        status=200,
+        body={"status": "ok", "checks": {"database": {"ok": True}}},
+    )
+    assert ok is False
+    assert "rate_limit_backend" in str(reason)
+
+
+def test_validate_health_payload_ready_200_rejects_failed_checks():
+    ok, reason = runtime_health._validate_health_payload(
+        name="ready",
+        status=200,
+        body={
+            "status": "ok",
+            "checks": {
+                "database": {"ok": False, "detail": "db down"},
+                "rate_limit_backend": {"ok": True, "detail": None},
+            },
+        },
+    )
+    assert ok is False
+    assert "cannot include failed checks" in str(reason)
+
+
+def test_validate_health_payload_ready_503_requires_failed_checks():
+    ok, reason = runtime_health._validate_health_payload(
+        name="ready",
+        status=503,
+        body={
+            "status": "degraded",
+            "checks": {
+                "database": {"ok": True, "detail": None},
+                "rate_limit_backend": {"ok": True, "detail": None},
+            },
+        },
+    )
+    assert ok is False
+    assert "must include failed checks" in str(reason)

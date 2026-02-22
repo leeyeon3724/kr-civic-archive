@@ -12,6 +12,8 @@ from urllib.parse import urlparse
 
 import requests
 
+REQUIRED_READY_CHECKS: tuple[str, ...] = ("database", "rate_limit_backend")
+
 
 def _http_get_json(url: str, timeout: float) -> tuple[int, dict | str]:
     parsed = urlparse(url)
@@ -90,6 +92,20 @@ def _validate_health_payload(*, name: str, status: int, body: dict | str) -> tup
         checks = body.get("checks")
         if not isinstance(checks, dict):
             return False, "ready endpoint must include checks object"
+        failed_checks: list[str] = []
+        for check_name in REQUIRED_READY_CHECKS:
+            check_payload = checks.get(check_name)
+            if not isinstance(check_payload, dict):
+                return False, f"ready endpoint must include checks.{check_name} object"
+            check_ok = check_payload.get("ok")
+            if not isinstance(check_ok, bool):
+                return False, f"ready endpoint must include checks.{check_name}.ok boolean"
+            if not check_ok:
+                failed_checks.append(check_name)
+        if status == 200 and failed_checks:
+            return False, "ready endpoint 200 response cannot include failed checks"
+        if status == 503 and not failed_checks:
+            return False, "ready endpoint degraded response must include failed checks"
         return True, None
 
     return True, None
