@@ -463,7 +463,7 @@ def main() -> int:
     init_db_fn = dependencies["init_db"]
 
     config = config_class()
-    db_engine = init_db_fn(config.database_url)
+    db_engine = init_db_fn(config.database_engine_url)
     connection_provider = db_engine.begin
     _seed_data(
         connection_provider=connection_provider,

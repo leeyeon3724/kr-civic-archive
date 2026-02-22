@@ -342,11 +342,13 @@ def test_database_url_preserves_special_character_credentials():
         POSTGRES_DB="archive",
     )
 
-    parsed = make_url(config.database_url)
+    parsed = make_url(config.database_engine_url)
     assert parsed.username == "app-user"
     assert parsed.password == "pa:ss@word"
     assert parsed.host == "db.internal"
     assert parsed.database == "archive"
+    assert "pa:ss@word" not in config.database_url
+    assert "***" in config.database_url
 
 
 def test_build_test_config_is_deterministic_against_env(monkeypatch):

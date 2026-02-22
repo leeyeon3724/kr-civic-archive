@@ -64,6 +64,14 @@ class Config(BaseSettings):
     @computed_field  # type: ignore[prop-decorator]
     @property
     def database_url(self) -> str:
+        return self.database_engine_url_obj.render_as_string(hide_password=True)
+
+    @property
+    def database_engine_url(self) -> str:
+        return self.database_engine_url_obj.render_as_string(hide_password=False)
+
+    @property
+    def database_engine_url_obj(self) -> URL:
         return URL.create(
             "postgresql+psycopg",
             username=self.POSTGRES_USER,
@@ -71,7 +79,7 @@ class Config(BaseSettings):
             host=self.POSTGRES_HOST,
             port=int(self.POSTGRES_PORT),
             database=self.POSTGRES_DB,
-        ).render_as_string(hide_password=False)
+        )
 
     @staticmethod
     def _parse_csv(value: str) -> List[str]:
