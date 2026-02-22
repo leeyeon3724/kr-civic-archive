@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import json
+from typing import Any
 
-from fastapi import Body, FastAPI, Request
+from fastapi import Body, FastAPI
 from fastapi.responses import JSONResponse, PlainTextResponse
 
 from app.bootstrap.contracts import DBHealthCheck, ProtectedDependencies, RateLimitHealthCheck
@@ -64,11 +64,6 @@ def register_system_routes(
             500: {"model": ErrorResponse},
         },
     )
-    async def echo(request: Request, _payload: dict = Body(default_factory=dict)) -> EchoResponse:
-        try:
-            data = await request.json()
-        except (json.JSONDecodeError, UnicodeDecodeError):
-            data = {}
-        if data is None:
-            data = {}
+    async def echo(_payload: Any = Body(default_factory=dict)) -> EchoResponse:
+        data = {} if _payload is None else _payload
         return EchoResponse(you_sent=data)

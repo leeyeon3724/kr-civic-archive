@@ -88,6 +88,25 @@ def test_system_routes_module_readiness_and_echo():
         assert echo.json() == {"you_sent": {"hello": "world"}}
 
 
+def test_system_routes_echo_reflects_any_json_payload():
+    api = FastAPI()
+    register_system_routes(
+        api,
+        protected_dependencies=[],
+        db_health_check=lambda: (True, None),
+        rate_limit_health_check=lambda: (True, None),
+    )
+
+    with TestClient(api) as client:
+        array_resp = client.post("/api/echo", json=[{"id": 1}, {"id": 2}])
+        assert array_resp.status_code == 200
+        assert array_resp.json() == {"you_sent": [{"id": 1}, {"id": 2}]}
+
+        string_resp = client.post("/api/echo", json="plain")
+        assert string_resp.status_code == 200
+        assert string_resp.json() == {"you_sent": "plain"}
+
+
 def test_create_app_disposes_db_engine_on_shutdown():
     class _NoopScope:
         def __enter__(self):
