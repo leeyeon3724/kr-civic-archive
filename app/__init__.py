@@ -1,7 +1,8 @@
 import logging
 from contextlib import AbstractContextManager
-from typing import Any, cast
+from contextlib import asynccontextmanager
 from contextlib import suppress
+from typing import Any, cast
 
 from fastapi import Depends, FastAPI
 from sqlalchemy import text
@@ -43,11 +44,23 @@ def create_app(app_config: Config | None = None) -> FastAPI:
 
     configure_logging(level=app_config.LOG_LEVEL, json_logs=app_config.LOG_JSON)
 
+    @asynccontextmanager
+    async def _lifespan(_api: FastAPI):
+        try:
+            yield
+        finally:
+            db_engine = getattr(_api.state, "db_engine", None)
+            if db_engine is None or not hasattr(db_engine, "dispose"):
+                return
+            with suppress(Exception):
+                db_engine.dispose()
+
     api = FastAPI(
         title="Civic Archive API",
         version=APP_VERSION,
         description="Local council archive API with FastAPI + PostgreSQL",
         openapi_tags=OPENAPI_TAGS,
+        lifespan=_lifespan,
     )
     api.state.config = app_config
 
@@ -69,16 +82,6 @@ def create_app(app_config: Config | None = None) -> FastAPI:
 
     api.state.db_engine = db_engine
     api.state.connection_provider = connection_provider
-
-    @api.on_event("shutdown")
-    def _shutdown_db() -> None:
-        db_engine = getattr(api.state, "db_engine", None)
-        if db_engine is None:
-            return
-        if not hasattr(db_engine, "dispose"):
-            return
-        with suppress(Exception):
-            db_engine.dispose()
 
     api_key_dependency = build_api_key_dependency(app_config)
     jwt_dependency = build_jwt_dependency(app_config)
