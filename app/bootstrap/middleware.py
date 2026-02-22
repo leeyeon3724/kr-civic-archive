@@ -71,6 +71,8 @@ def register_core_middleware(api: FastAPI, config: Config) -> None:
                     content_length = int(content_length_raw)
                 except ValueError:
                     return _invalid_content_length_response(request)
+                if content_length < 0:
+                    return _invalid_content_length_response(request)
                 if content_length > max_request_body_bytes:
                     return _payload_too_large_response(
                         request,

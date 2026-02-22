@@ -154,3 +154,21 @@ def test_request_size_guard_applies_to_put_and_patch_before_route_resolution(mak
         )
         assert response.status_code == 400
         assert response.json()["code"] == "BAD_REQUEST"
+
+
+@pytest.mark.parametrize("method", ["POST", "PUT", "PATCH"])
+def test_request_size_guard_rejects_negative_content_length_header(make_engine, method):
+    with patch("app.database.create_engine", return_value=make_engine(lambda *_: StubResult())):
+        app = create_app(build_test_config(MAX_REQUEST_BODY_BYTES=64))
+
+    with TestClient(app) as tc:
+        response = tc.request(
+            method,
+            "/api/echo",
+            content='{"payload":"x"}',
+            headers={"Content-Type": "application/json", "Content-Length": "-1"},
+        )
+        assert response.status_code == 400
+        payload = response.json()
+        assert payload["code"] == "BAD_REQUEST"
+        assert payload["message"] == "Invalid Content-Length header"
