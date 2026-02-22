@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 from app.bootstrap.exception_handlers import register_exception_handlers
 from app.observability import register_observability
 from app.security import build_rate_limit_dependency
-from app.security_dependencies import build_api_key_dependency
+from app.security_dependencies import build_api_key_dependency, build_jwt_dependency
 
 
 def _build_app_with_dependency(dependency) -> FastAPI:
@@ -24,7 +24,13 @@ def _build_app_with_dependency(dependency) -> FastAPI:
     return api
 
 
-def _assert_error_contract(response, expected_code: str, expected_status: int) -> None:
+def _assert_error_contract(
+    response,
+    expected_code: str,
+    expected_status: int,
+    *,
+    expected_reason: str | None = None,
+) -> None:
     assert response.status_code == expected_status
     payload = response.json()
     assert payload["code"] == expected_code
@@ -32,6 +38,9 @@ def _assert_error_contract(response, expected_code: str, expected_status: int) -
     assert payload["error"] == payload["message"]
     assert payload["request_id"]
     assert response.headers["X-Request-Id"] == payload["request_id"]
+    if expected_reason is not None:
+        assert isinstance(payload.get("details"), dict)
+        assert payload["details"]["reason"] == expected_reason
 
 
 def test_api_key_unauthorized_error_has_request_id_header():
@@ -41,7 +50,27 @@ def test_api_key_unauthorized_error_has_request_id_header():
     with TestClient(app) as client:
         response = client.get("/secure")
 
-    _assert_error_contract(response, expected_code="UNAUTHORIZED", expected_status=401)
+    _assert_error_contract(
+        response,
+        expected_code="UNAUTHORIZED",
+        expected_status=401,
+        expected_reason="missing_api_key",
+    )
+
+
+def test_jwt_unauthorized_error_has_request_id_header():
+    dependency = build_jwt_dependency(SimpleNamespace(REQUIRE_JWT=True))
+    app = _build_app_with_dependency(dependency)
+
+    with TestClient(app) as client:
+        response = client.get("/secure")
+
+    _assert_error_contract(
+        response,
+        expected_code="UNAUTHORIZED",
+        expected_status=401,
+        expected_reason="missing_authorization_header",
+    )
 
 
 def test_rate_limit_error_has_request_id_header():
@@ -64,4 +93,9 @@ def test_rate_limit_error_has_request_id_header():
         second = client.get("/secure")
 
     assert first.status_code == 200
-    _assert_error_contract(second, expected_code="RATE_LIMITED", expected_status=429)
+    _assert_error_contract(
+        second,
+        expected_code="RATE_LIMITED",
+        expected_status=429,
+        expected_reason="rate_limit_exceeded",
+    )

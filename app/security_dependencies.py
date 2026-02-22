@@ -17,8 +17,20 @@ def build_api_key_dependency(config: Any) -> Callable[..., Any]:
     async def verify_api_key(x_api_key: str | None = Header(default=None, alias="X-API-Key")) -> None:
         if not require_api_key:
             return
-        if not x_api_key or not hmac.compare_digest(x_api_key, expected_key):
-            raise http_error(401, "UNAUTHORIZED", "Unauthorized")
+        if not x_api_key:
+            raise http_error(
+                401,
+                "UNAUTHORIZED",
+                "Unauthorized",
+                details={"auth_type": "api_key", "reason": "missing_api_key"},
+            )
+        if not hmac.compare_digest(x_api_key, expected_key):
+            raise http_error(
+                401,
+                "UNAUTHORIZED",
+                "Unauthorized",
+                details={"auth_type": "api_key", "reason": "invalid_api_key"},
+            )
 
     return verify_api_key
 
@@ -39,11 +51,21 @@ def build_jwt_dependency(
             return
 
         if not authorization:
-            raise http_error(401, "UNAUTHORIZED", "Unauthorized")
+            raise http_error(
+                401,
+                "UNAUTHORIZED",
+                "Unauthorized",
+                details={"auth_type": "jwt", "reason": "missing_authorization_header"},
+            )
         scheme, _, value = authorization.partition(" ")
         token = value.strip()
         if scheme.lower() != "bearer" or not token:
-            raise http_error(401, "UNAUTHORIZED", "Unauthorized")
+            raise http_error(
+                401,
+                "UNAUTHORIZED",
+                "Unauthorized",
+                details={"auth_type": "jwt", "reason": "invalid_authorization_header"},
+            )
 
         claims = validate_jwt(token, config)
         authorize_claims(request, claims, config)

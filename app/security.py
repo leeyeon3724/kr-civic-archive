@@ -142,6 +142,15 @@ def build_rate_limit_dependency(config) -> Callable:
         if not limiter.enabled:
             return
         if not limiter.allow(_client_key(request, trusted_proxy_networks=trusted_proxy_networks)):
-            raise http_error(429, "RATE_LIMITED", "Too Many Requests")
+            raise http_error(
+                429,
+                "RATE_LIMITED",
+                "Too Many Requests",
+                details={
+                    "reason": "rate_limit_exceeded",
+                    "limit_per_minute": int(config.RATE_LIMIT_PER_MINUTE),
+                    "backend": str(config.rate_limit_backend),
+                },
+            )
 
     return verify_rate_limit

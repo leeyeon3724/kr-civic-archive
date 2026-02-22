@@ -39,7 +39,12 @@ def required_scope_for_method(config: Any, method: str) -> str | None:
 def validate_jwt_hs256(token: str, config: Any) -> dict[str, Any]:
     secret = (config.JWT_SECRET or "").strip()
     if not secret:
-        raise http_error(401, "UNAUTHORIZED", "Unauthorized")
+        raise http_error(
+            401,
+            "UNAUTHORIZED",
+            "Unauthorized",
+            details={"auth_type": "jwt", "reason": "jwt_secret_not_configured"},
+        )
 
     audience = (config.JWT_AUDIENCE or "").strip() or None
     issuer = (config.JWT_ISSUER or "").strip() or None
@@ -65,10 +70,20 @@ def validate_jwt_hs256(token: str, config: Any) -> dict[str, Any]:
             leeway=leeway_seconds,
         )
     except (InvalidTokenError, TypeError, ValueError):
-        raise http_error(401, "UNAUTHORIZED", "Unauthorized")
+        raise http_error(
+            401,
+            "UNAUTHORIZED",
+            "Unauthorized",
+            details={"auth_type": "jwt", "reason": "invalid_token"},
+        )
 
     if not isinstance(payload, dict):
-        raise http_error(401, "UNAUTHORIZED", "Unauthorized")
+        raise http_error(
+            401,
+            "UNAUTHORIZED",
+            "Unauthorized",
+            details={"auth_type": "jwt", "reason": "invalid_token_payload"},
+        )
     return payload
 
 
@@ -84,4 +99,9 @@ def authorize_claims_for_request(request: Any, claims: dict[str, Any], config: A
 
     scope_values = extract_values_set(claims, "scope", "scopes")
     if required_scope not in scope_values:
-        raise http_error(403, "FORBIDDEN", "Forbidden")
+        raise http_error(
+            403,
+            "FORBIDDEN",
+            "Forbidden",
+            details={"auth_type": "jwt", "reason": "insufficient_scope", "required_scope": required_scope},
+        )
