@@ -48,7 +48,7 @@ def combine_meeting_no(session_val, meeting_no_raw, meeting_no_int) -> str | Non
 
 
 def coerce_meeting_no_int(meeting_no_raw: Any) -> int | None:
-    if meeting_no_raw is None or isinstance(meeting_no_raw, str):
+    if meeting_no_raw is None or isinstance(meeting_no_raw, (str, bool)):
         return None
     try:
         return int(meeting_no_raw)

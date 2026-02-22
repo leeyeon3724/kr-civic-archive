@@ -79,6 +79,19 @@ def test_normalize_minutes_converts_numeric_meeting_no(minutes_module):
     assert result["meeting_no_combined"] == "29th 3\ucc28"
 
 
+def test_normalize_minutes_ignores_boolean_meeting_no(minutes_module):
+    result = minutes_module.normalize_minutes(
+        {
+            "council": "Sample Council",
+            "session": "29th",
+            "url": "https://example.com/minutes/3",
+            "meeting_no": True,
+        }
+    )
+    assert result["meeting_no"] is None
+    assert result["meeting_no_combined"] == "29th"
+
+
 def test_normalize_segment_validates_importance(segments_module):
     ok = segments_module.normalize_segment({"council": "A", "importance": "2"})
     assert ok["importance"] == 2
@@ -88,6 +101,18 @@ def test_normalize_segment_validates_importance(segments_module):
 
     with pytest.raises(HTTPException):
         segments_module.normalize_segment({"council": "A", "importance": 4})
+
+
+def test_normalize_segment_ignores_boolean_meeting_no(segments_module):
+    result = segments_module.normalize_segment(
+        {
+            "council": "A",
+            "session": "301",
+            "meeting_no": False,
+        }
+    )
+    assert result["meeting_no"] is None
+    assert result["meeting_no_combined"] == "301"
 
 
 def test_upsert_articles_counts_insert_and_update(news_module, make_connection_provider):
