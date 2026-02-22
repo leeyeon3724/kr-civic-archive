@@ -4,7 +4,7 @@ import json
 from datetime import date, datetime
 from typing import Any
 
-from sqlalchemy import bindparam
+from sqlalchemy import Date, bindparam, cast, text
 
 from app.repositories.search import build_split_search_condition, build_split_search_params
 from app.repositories.session_provider import ConnectionProvider, open_connection_scope
@@ -135,6 +135,51 @@ def add_split_search_filter(
         return
     conditions.append(build_split_search_condition(columns=columns))
     params.update(build_split_search_params(normalized_query))
+
+
+def add_date_from_filter(
+    *,
+    value: str | None,
+    param_name: str,
+    column_expr: Any,
+    conditions: list[Any],
+    params: dict[str, Any],
+) -> None:
+    normalized_value = normalize_optional_str(value)
+    if normalized_value is None:
+        return
+    conditions.append(column_expr >= bindparam(param_name))
+    params[param_name] = normalized_value
+
+
+def add_date_to_filter_inclusive(
+    *,
+    value: str | None,
+    param_name: str,
+    column_expr: Any,
+    conditions: list[Any],
+    params: dict[str, Any],
+) -> None:
+    normalized_value = normalize_optional_str(value)
+    if normalized_value is None:
+        return
+    conditions.append(column_expr <= bindparam(param_name))
+    params[param_name] = normalized_value
+
+
+def add_date_to_filter_next_day_exclusive(
+    *,
+    value: str | None,
+    param_name: str,
+    column_expr: Any,
+    conditions: list[Any],
+    params: dict[str, Any],
+) -> None:
+    normalized_value = normalize_optional_str(value)
+    if normalized_value is None:
+        return
+    conditions.append(column_expr < (cast(bindparam(param_name), Date) + text("INTERVAL '1 day'")))
+    params[param_name] = normalized_value
 
 
 def execute_filtered_paginated_query(

@@ -6,6 +6,8 @@ from sqlalchemy import bindparam, column, func, select, table, text
 
 from app.ports.dto import SegmentRecordDTO, SegmentUpsertDTO
 from app.repositories.common import (
+    add_date_from_filter,
+    add_date_to_filter_inclusive,
     add_not_none_equals_filter,
     add_split_search_filter,
     add_truthy_equals_filter,
@@ -216,13 +218,20 @@ def list_segments(
         params=params,
     )
 
-    if date_from:
-        conditions.append(COUNCIL_SPEECH_SEGMENTS.c.meeting_date >= bindparam("date_from"))
-        params["date_from"] = date_from
-
-    if date_to:
-        conditions.append(COUNCIL_SPEECH_SEGMENTS.c.meeting_date <= bindparam("date_to"))
-        params["date_to"] = date_to
+    add_date_from_filter(
+        value=date_from,
+        param_name="date_from",
+        column_expr=COUNCIL_SPEECH_SEGMENTS.c.meeting_date,
+        conditions=conditions,
+        params=params,
+    )
+    add_date_to_filter_inclusive(
+        value=date_to,
+        param_name="date_to",
+        column_expr=COUNCIL_SPEECH_SEGMENTS.c.meeting_date,
+        conditions=conditions,
+        params=params,
+    )
 
     list_stmt = (
         select(

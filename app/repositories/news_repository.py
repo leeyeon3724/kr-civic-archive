@@ -2,11 +2,14 @@ from __future__ import annotations
 
 from typing import Any, cast as typing_cast
 
-from sqlalchemy import Date, bindparam, cast, column, func, select, table, text
+from sqlalchemy import bindparam, column, func, select, table, text
 
 from app.ports.dto import NewsArticleRecordDTO, NewsArticleUpsertDTO
 from app.repositories.common import (
+    add_date_from_filter,
+    add_date_to_filter_next_day_exclusive,
     add_split_search_filter,
+    add_truthy_equals_filter,
     dedupe_rows_by_key,
     execute_filtered_paginated_query,
     to_json_recordset,
@@ -122,20 +125,27 @@ def list_articles(
         params=params,
     )
 
-    if source:
-        conditions.append(NEWS_ARTICLES.c.source == bindparam("source"))
-        params["source"] = source
-
-    if date_from:
-        conditions.append(NEWS_ARTICLES.c.published_at >= bindparam("date_from"))
-        params["date_from"] = date_from
-
-    if date_to:
-        conditions.append(
-            NEWS_ARTICLES.c.published_at
-            < (cast(bindparam("date_to"), Date) + text("INTERVAL '1 day'"))
-        )
-        params["date_to"] = date_to
+    add_truthy_equals_filter(
+        value=source,
+        param_name="source",
+        column_expr=NEWS_ARTICLES.c.source,
+        conditions=conditions,
+        params=params,
+    )
+    add_date_from_filter(
+        value=date_from,
+        param_name="date_from",
+        column_expr=NEWS_ARTICLES.c.published_at,
+        conditions=conditions,
+        params=params,
+    )
+    add_date_to_filter_next_day_exclusive(
+        value=date_to,
+        param_name="date_to",
+        column_expr=NEWS_ARTICLES.c.published_at,
+        conditions=conditions,
+        params=params,
+    )
 
     list_stmt = (
         select(
