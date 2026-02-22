@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
@@ -51,3 +52,36 @@ def test_metrics_records_route_template_cache_strategy_for_pre_route_failures(ma
         assert after_metrics.status_code == 200
         assert _histogram_count(after_metrics.text, strategy="router") >= before_router + 1
         assert _histogram_count(after_metrics.text, strategy="cache") >= before_cache + 1
+
+
+def test_route_template_cache_operations_are_thread_safe(monkeypatch):
+    observability._ROUTE_TEMPLATE_CACHE.clear()
+    monkeypatch.setattr(observability, "ROUTE_TEMPLATE_CACHE_MAX_SIZE", 1)
+    errors: list[Exception] = []
+
+    def write_cache(worker: int) -> None:
+        for index in range(1000):
+            key = ("GET", f"/api/thread-{worker % 3}-{index % 5}")
+            try:
+                observability._route_template_cache_set(key, key[1])
+            except Exception as exc:  # pragma: no cover
+                errors.append(exc)
+
+    def read_cache(worker: int) -> None:
+        for index in range(1000):
+            key = ("GET", f"/api/thread-{worker % 3}-{index % 5}")
+            try:
+                observability._route_template_cache_get(key)
+            except Exception as exc:  # pragma: no cover
+                errors.append(exc)
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        futures = []
+        for worker in range(4):
+            futures.append(pool.submit(write_cache, worker))
+            futures.append(pool.submit(read_cache, worker))
+        for future in futures:
+            future.result()
+
+    assert errors == []
+    assert len(observability._ROUTE_TEMPLATE_CACHE) <= observability.ROUTE_TEMPLATE_CACHE_MAX_SIZE

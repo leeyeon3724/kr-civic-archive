@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import OrderedDict
 import logging
+import threading
 import time
 from typing import Any
 from uuid import uuid4
@@ -33,6 +34,7 @@ ROUTE_TEMPLATE_CACHE_MAX_SIZE = 512
 
 logger = logging.getLogger("civic_archive.api")
 _ROUTE_TEMPLATE_CACHE: OrderedDict[tuple[str, str], str] = OrderedDict()
+_ROUTE_TEMPLATE_CACHE_LOCK = threading.RLock()
 
 
 def _route_cache_key(request: Request) -> tuple[str, str]:
@@ -42,18 +44,20 @@ def _route_cache_key(request: Request) -> tuple[str, str]:
 
 
 def _route_template_cache_get(cache_key: tuple[str, str]) -> str | None:
-    route_path = _ROUTE_TEMPLATE_CACHE.get(cache_key)
-    if route_path is None:
-        return None
-    _ROUTE_TEMPLATE_CACHE.move_to_end(cache_key)
-    return route_path
+    with _ROUTE_TEMPLATE_CACHE_LOCK:
+        route_path = _ROUTE_TEMPLATE_CACHE.get(cache_key)
+        if route_path is None:
+            return None
+        _ROUTE_TEMPLATE_CACHE.move_to_end(cache_key)
+        return route_path
 
 
 def _route_template_cache_set(cache_key: tuple[str, str], route_path: str) -> None:
-    _ROUTE_TEMPLATE_CACHE[cache_key] = route_path
-    _ROUTE_TEMPLATE_CACHE.move_to_end(cache_key)
-    while len(_ROUTE_TEMPLATE_CACHE) > ROUTE_TEMPLATE_CACHE_MAX_SIZE:
-        _ROUTE_TEMPLATE_CACHE.popitem(last=False)
+    with _ROUTE_TEMPLATE_CACHE_LOCK:
+        _ROUTE_TEMPLATE_CACHE[cache_key] = route_path
+        _ROUTE_TEMPLATE_CACHE.move_to_end(cache_key)
+        while len(_ROUTE_TEMPLATE_CACHE) > ROUTE_TEMPLATE_CACHE_MAX_SIZE:
+            _ROUTE_TEMPLATE_CACHE.popitem(last=False)
 
 
 def _resolve_route_template_from_router(request: Request, api: FastAPI | None = None) -> str | None:
