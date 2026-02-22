@@ -7,6 +7,7 @@ import argparse
 import json
 import sys
 import time
+from collections.abc import Iterable
 from urllib.parse import urlparse
 
 import requests
@@ -37,22 +38,61 @@ def _check_with_retry(
     timeout: float,
     retries: int,
     retry_delay_seconds: float,
+    allow_ready_degraded: bool = False,
 ) -> bool:
+    expected_statuses = {int(expected)}
+    if name == "ready" and allow_ready_degraded:
+        expected_statuses.add(503)
+
     attempts = max(1, retries + 1)
     for attempt in range(1, attempts + 1):
         status, body = _http_get_json(url, timeout)
-        if status == expected:
-            print(f"[OK] {name}: {status} ({url}) [attempt {attempt}/{attempts}]")
-            return True
+        if status in expected_statuses:
+            payload_ok, payload_error = _validate_health_payload(name=name, status=status, body=body)
+            if payload_ok:
+                print(f"[OK] {name}: {status} ({url}) [attempt {attempt}/{attempts}]")
+                return True
+            status = int(status)
+            body = {"validation_error": payload_error, "body": body}
 
         if attempt < attempts:
             time.sleep(max(0.0, retry_delay_seconds))
             continue
 
-        print(f"[FAIL] {name}: expected {expected}, got {status} ({url}) [attempt {attempt}/{attempts}]")
+        expected_label = _format_expected_statuses(expected_statuses)
+        print(f"[FAIL] {name}: expected {expected_label}, got {status} ({url}) [attempt {attempt}/{attempts}]")
         print(f"       body={body}")
         return False
     return False
+
+
+def _format_expected_statuses(statuses: Iterable[int]) -> str:
+    return "|".join(str(item) for item in sorted(set(int(value) for value in statuses)))
+
+
+def _validate_health_payload(*, name: str, status: int, body: dict | str) -> tuple[bool, str | None]:
+    if not isinstance(body, dict):
+        return False, "health response body must be a JSON object"
+
+    response_status = body.get("status")
+    if name == "live":
+        if status != 200:
+            return False, "live endpoint must return 200"
+        if response_status != "ok":
+            return False, "live endpoint must include status=ok"
+        return True, None
+
+    if name == "ready":
+        if status == 200 and response_status != "ok":
+            return False, "ready endpoint must include status=ok for 200 responses"
+        if status == 503 and response_status != "degraded":
+            return False, "ready endpoint must include status=degraded for 503 responses"
+        checks = body.get("checks")
+        if not isinstance(checks, dict):
+            return False, "ready endpoint must include checks object"
+        return True, None
+
+    return True, None
 
 
 def main() -> int:
@@ -70,6 +110,11 @@ def main() -> int:
         type=float,
         default=1.0,
         help="Delay between retries in seconds",
+    )
+    parser.add_argument(
+        "--allow-ready-degraded",
+        action="store_true",
+        help="Allow readiness 503(degraded) during incident/degraded-mode checks.",
     )
     args = parser.parse_args()
 
@@ -92,6 +137,7 @@ def main() -> int:
             timeout=timeout,
             retries=retries,
             retry_delay_seconds=retry_delay_seconds,
+            allow_ready_degraded=bool(args.allow_ready_degraded),
         )
         failed = failed or (not ok)
 

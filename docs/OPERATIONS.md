@@ -55,6 +55,8 @@
 Runtime checks:
 
 - `python scripts/check_runtime_health.py --base-url http://localhost:8000`
+- 장애/강등 모드 점검 시 readiness 503 허용:
+  - `python scripts/check_runtime_health.py --base-url http://localhost:8000 --allow-ready-degraded`
 - Verify oversized payload guard:
   - confirm `413 PAYLOAD_TOO_LARGE` is returned for request size violations
   - confirm batch ingest limit blocks oversized list payloads
