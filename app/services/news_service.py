@@ -7,29 +7,28 @@ from app.ports.repositories import NewsRepositoryPort
 from app.ports.services import NewsServicePort
 from app.repositories.news_repository import NewsRepository
 from app.repositories.session_provider import ConnectionProvider, ensure_connection_provider
+from app.services.common import (
+    ensure_item_object,
+    normalize_list_window,
+    normalize_optional_filters,
+    require_stripped_text,
+)
 from app.utils import (
-    bad_request,
     ensure_temporal_input,
-    normalize_date_filter,
     normalize_optional_str,
-    normalize_pagination,
     parse_datetime,
 )
 
 
 def _normalize_article(item: dict[str, object]) -> NewsArticleUpsertDTO:
-    if not isinstance(item, dict):
-        raise bad_request("Each item must be a JSON object.")
-
-    title = item.get("title")
-    url = item.get("url")
-    if not isinstance(title, str) or not title.strip() or not isinstance(url, str) or not url.strip():
-        raise bad_request("Missing required fields: title, url")
+    item = ensure_item_object(item)
+    title = require_stripped_text(item, "title", error_message="Missing required fields: title, url")
+    url = require_stripped_text(item, "url", error_message="Missing required fields: title, url")
 
     return {
         "source": normalize_optional_str(item.get("source")),
-        "title": title.strip(),
-        "url": url.strip(),
+        "title": title,
+        "url": url,
         "published_at": parse_datetime(
             ensure_temporal_input(
                 item.get("published_at"),
@@ -64,12 +63,18 @@ class NewsService:
         page: int,
         size: int,
     ) -> tuple[list[NewsArticleRecordDTO], int]:
-        page, size = normalize_pagination(page, size)
+        page, size, date_from, date_to = normalize_list_window(
+            page=page,
+            size=size,
+            date_from=date_from,
+            date_to=date_to,
+        )
+        normalized_filters = normalize_optional_filters({"q": q, "source": source})
         return self._repository.list_articles(
-            q=normalize_optional_str(q),
-            source=normalize_optional_str(source),
-            date_from=normalize_date_filter(date_from, field_name="from"),
-            date_to=normalize_date_filter(date_to, field_name="to"),
+            q=normalized_filters["q"],
+            source=normalized_filters["source"],
+            date_from=date_from,
+            date_to=date_to,
             page=page,
             size=size,
         )

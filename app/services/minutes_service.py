@@ -7,26 +7,25 @@ from app.ports.repositories import MinutesRepositoryPort
 from app.ports.services import MinutesServicePort
 from app.repositories.minutes_repository import MinutesRepository
 from app.repositories.session_provider import ConnectionProvider, ensure_connection_provider
+from app.services.common import (
+    ensure_item_object,
+    normalize_list_window,
+    normalize_optional_filters,
+    require_stripped_text,
+)
 from app.utils import (
-    bad_request,
     coerce_meeting_no_int,
     combine_meeting_no,
     ensure_temporal_input,
-    normalize_date_filter,
     normalize_optional_str,
-    normalize_pagination,
     parse_date,
 )
 
 
 def _normalize_minutes(item: dict[str, object]) -> MinutesUpsertDTO:
-    if not isinstance(item, dict):
-        raise bad_request("Each item must be a JSON object.")
-
-    council = item.get("council")
-    url = item.get("url")
-    if not isinstance(council, str) or not council.strip() or not isinstance(url, str) or not url.strip():
-        raise bad_request("Missing required fields: council, url")
+    item = ensure_item_object(item)
+    council = require_stripped_text(item, "council", error_message="Missing required fields: council, url")
+    url = require_stripped_text(item, "url", error_message="Missing required fields: council, url")
 
     session = normalize_optional_str(item.get("session"))
     meeting_no_raw = item.get("meeting_no")
@@ -40,12 +39,12 @@ def _normalize_minutes(item: dict[str, object]) -> MinutesUpsertDTO:
     )
 
     return {
-        "council": council.strip(),
+        "council": council,
         "committee": normalize_optional_str(item.get("committee")),
         "session": session,
         "meeting_no": meeting_no_int,
         "meeting_no_combined": combine_meeting_no(session, meeting_no_raw, meeting_no_int),
-        "url": url.strip(),
+        "url": url,
         "meeting_date": meeting_date.date() if meeting_date else None,
         "content": normalize_optional_str(item.get("content")),
         "tag": item.get("tag"),
@@ -78,15 +77,29 @@ class MinutesService:
         page: int,
         size: int,
     ) -> tuple[list[MinutesRecordDTO], int]:
-        page, size = normalize_pagination(page, size)
+        page, size, date_from, date_to = normalize_list_window(
+            page=page,
+            size=size,
+            date_from=date_from,
+            date_to=date_to,
+        )
+        normalized_filters = normalize_optional_filters(
+            {
+                "q": q,
+                "council": council,
+                "committee": committee,
+                "session": session,
+                "meeting_no": meeting_no,
+            }
+        )
         return self._repository.list_minutes(
-            q=normalize_optional_str(q),
-            council=normalize_optional_str(council),
-            committee=normalize_optional_str(committee),
-            session=normalize_optional_str(session),
-            meeting_no=normalize_optional_str(meeting_no),
-            date_from=normalize_date_filter(date_from, field_name="from"),
-            date_to=normalize_date_filter(date_to, field_name="to"),
+            q=normalized_filters["q"],
+            council=normalized_filters["council"],
+            committee=normalized_filters["committee"],
+            session=normalized_filters["session"],
+            meeting_no=normalized_filters["meeting_no"],
+            date_from=date_from,
+            date_to=date_to,
             page=page,
             size=size,
         )

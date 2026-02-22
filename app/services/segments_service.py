@@ -10,14 +10,18 @@ from app.ports.repositories import SegmentsRepositoryPort
 from app.ports.services import SegmentsServicePort
 from app.repositories.segments_repository import SegmentsRepository
 from app.repositories.session_provider import ConnectionProvider, ensure_connection_provider
+from app.services.common import (
+    ensure_item_object,
+    normalize_list_window,
+    normalize_optional_filters,
+    require_stripped_text,
+)
 from app.utils import (
     bad_request,
     coerce_meeting_no_int,
     combine_meeting_no,
     ensure_temporal_input,
-    normalize_date_filter,
     normalize_optional_str,
-    normalize_pagination,
     parse_date,
 )
 
@@ -80,12 +84,8 @@ def _build_legacy_segment_dedupe_hash(item: Mapping[str, object]) -> str:
 
 
 def _normalize_segment(item: dict[str, object]) -> SegmentUpsertDTO:
-    if not isinstance(item, dict):
-        raise bad_request("Each item must be a JSON object.")
-
-    council = item.get("council")
-    if not isinstance(council, str) or not council.strip():
-        raise bad_request("Missing required field: council")
+    item = ensure_item_object(item)
+    council = require_stripped_text(item, "council", error_message="Missing required field: council")
 
     session = normalize_optional_str(item.get("session"))
     meeting_no_raw = item.get("meeting_no")
@@ -99,7 +99,7 @@ def _normalize_segment(item: dict[str, object]) -> SegmentUpsertDTO:
     )
 
     normalized: SegmentUpsertDTO = {
-        "council": council.strip(),
+        "council": council,
         "committee": normalize_optional_str(item.get("committee")),
         "session": session,
         "meeting_no": meeting_no_int,
@@ -191,19 +191,36 @@ class SegmentsService:
         page: int,
         size: int,
     ) -> tuple[list[SegmentRecordDTO], int]:
-        page, size = normalize_pagination(page, size)
+        page, size, date_from, date_to = normalize_list_window(
+            page=page,
+            size=size,
+            date_from=date_from,
+            date_to=date_to,
+        )
+        normalized_filters = normalize_optional_filters(
+            {
+                "q": q,
+                "council": council,
+                "committee": committee,
+                "session": session,
+                "meeting_no": meeting_no,
+                "party": party,
+                "constituency": constituency,
+                "department": department,
+            }
+        )
         return self._repository.list_segments(
-            q=normalize_optional_str(q),
-            council=normalize_optional_str(council),
-            committee=normalize_optional_str(committee),
-            session=normalize_optional_str(session),
-            meeting_no=normalize_optional_str(meeting_no),
+            q=normalized_filters["q"],
+            council=normalized_filters["council"],
+            committee=normalized_filters["committee"],
+            session=normalized_filters["session"],
+            meeting_no=normalized_filters["meeting_no"],
             importance=importance,
-            party=normalize_optional_str(party),
-            constituency=normalize_optional_str(constituency),
-            department=normalize_optional_str(department),
-            date_from=normalize_date_filter(date_from, field_name="from"),
-            date_to=normalize_date_filter(date_to, field_name="to"),
+            party=normalized_filters["party"],
+            constituency=normalized_filters["constituency"],
+            department=normalized_filters["department"],
+            date_from=date_from,
+            date_to=date_to,
             page=page,
             size=size,
         )
