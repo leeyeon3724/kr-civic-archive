@@ -24,40 +24,7 @@
 
 ## 현재 백로그
 
-- 상태: 계획 / 우선순위: 중
-  - 항목: 요청 바디 가드에서 음수 `Content-Length` 차단
-  - 대상:
-    - `app/bootstrap/middleware.py`
-    - `tests/bootstrap/test_runtime_limits.py`
-  - 과제: `Content-Length` 파싱 후 음수 값(`-1` 등)을 `400 BAD_REQUEST`로 일관 처리
-  - 산출 기준:
-    - 음수/비정상 `Content-Length` 요청이 모두 `400`과 동일 에러 메시지로 응답
-    - 기존 `413`(payload too large) 경로와 충돌 없이 회귀 테스트 통과
-
-- 상태: 계획 / 우선순위: 중
-  - 항목: 리소스 존재 확인 가드의 falsy 오판정 제거
-  - 대상:
-    - `app/routes/common.py`
-    - `app/routes/news.py`
-    - `app/routes/minutes.py`
-    - `app/routes/segments.py`
-    - `tests/test_bootstrap_boundaries.py`
-  - 과제: `ensure_resource_found` 판정 조건을 `None` 전용으로 변경해 빈 dict/list/0 오탐을 제거
-  - 산출 기준:
-    - `None`만 `404`를 반환하고, 기타 falsy 값은 `NOT_FOUND`로 강제 변환되지 않음
-    - 라우트 상세 조회/삭제의 기존 정상·404 계약 테스트 유지
-
-- 상태: 계획 / 우선순위: 중
-  - 항목: `request.client` 부재 시 rate-limit client key 안정화
-  - 대상:
-    - `app/security_proxy.py`
-    - `app/security.py`
-    - `tests/test_security_modules.py`
-    - `tests/security/test_rate_limit_runtime.py`
-  - 과제: `request.client` 미존재 시 `request_id` 기반 임시 키 대신 안정적인 fallback 규칙을 도입
-  - 산출 기준:
-    - 동일 요청자 조건에서 client key가 요청 간 불필요하게 변하지 않음
-    - XFF/신뢰 프록시/비정상 헤더 기존 경계 테스트와 신규 fallback 테스트 통과
+- 현재 활성 항목 없음
 
 ## 운영 메모
 
