@@ -26,6 +26,7 @@ DEFAULT_TARGETS = [
     "scripts/check_runtime_health.py",
     "scripts/check_schema_policy.py",
     "scripts/check_slo_policy.py",
+    "scripts/check_quality_metrics.py",
     "scripts/check_version_consistency.py",
 ]
 

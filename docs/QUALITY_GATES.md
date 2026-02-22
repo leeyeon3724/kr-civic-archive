@@ -12,6 +12,7 @@ python scripts/check_docs_routes.py
 python scripts/check_schema_policy.py
 python scripts/check_version_consistency.py
 python scripts/check_slo_policy.py
+python scripts/check_quality_metrics.py
 ```
 
 ## 브랜치/PR 게이트

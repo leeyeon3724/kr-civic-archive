@@ -74,6 +74,7 @@ scripts/
 ├── check_mypy.py        # mypy 타입체크 래퍼 (blocking 기본)
 ├── check_schema_policy.py # 런타임 수동 DDL 금지 정책 검사
 ├── check_slo_policy.py  # SLO 정책 문서 기준선 검사
+├── check_quality_metrics.py # 품질 지표 정책 문서 기준선 검사
 ├── check_runtime_health.py # 배포 전 liveness/readiness 가드 검사
 ├── check_version_consistency.py # APP_VERSION <-> app/__init__.py <-> CHANGELOG 정합성 검사
 └── install_git_hooks.ps1 # commit-msg 훅 설치 스크립트
@@ -150,6 +151,7 @@ ASGI 엔트리포인트: `app.main:app`
 - 타입체크 범위: `mypy.ini` + `scripts/check_mypy.py` (bootstrap/routes/services/ports/repositories/observability 범위 blocking)
 - 성능 회귀 체크: `scripts/benchmark_queries.py` + avg/p95 threshold 검사
 - 성능 임계값 프로파일: `docs/PERFORMANCE.md` + `scripts/benchmark_queries.py --profile <dev|staging|prod>`
+- 품질 지표 가드: `docs/QUALITY_METRICS.md` + `scripts/check_quality_metrics.py`
 - 문서-코드 정합성: `scripts/check_docs_routes.py` + CI
 - 커밋 메시지 정책: `scripts/check_commit_messages.py`
 - 버전 정합성: `scripts/check_version_consistency.py` + CI

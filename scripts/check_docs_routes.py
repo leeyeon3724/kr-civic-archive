@@ -18,6 +18,7 @@ REQUIRED_README_LINKS = [
     "docs/ARCHITECTURE.md",
     "docs/ENV.md",
     "docs/QUALITY_GATES.md",
+    "docs/QUALITY_METRICS.md",
     "docs/BACKLOG.md",
 ]
 REQUIRED_ENV_VARS = [
