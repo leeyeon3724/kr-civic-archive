@@ -12,10 +12,10 @@
 ## 현재 백로그
 
 - 상태: 계획
-- 항목: 목록 API 조회/카운트 2쿼리 패턴 성능 검증 및 최적화안 도출
-  - 근거: `app/repositories/common.py`의 `execute_paginated_query`가 list + count를 별도 실행
-  - 리스크: 고트래픽 구간에서 DB CPU/latency(p95) 악화 가능
-  - 산출: 실제 부하 프로파일링(`scripts/benchmark_queries.py`) 기반 임계치 점검 + 필요 시 최소 변경 최적화안 제시
+- 항목: 목록 API total 산출의 window/CTE 단일 쿼리 전환 타당성 검토
+  - 근거: 현재는 첫 페이지 미만 결과에서만 count 생략 최적화가 적용되며, 고부하 구간에서는 여전히 list/count 분리 실행
+  - 리스크: 대규모 데이터셋 + 복합 필터에서 count query가 p95 병목으로 남을 수 있음
+  - 산출: 실제 운영 데이터 분포 기준으로 window/CTE 방식의 실행 계획/지연시간/리소스 비교 결과 문서화
 - 상태: 계획
 - 항목: `meeting_no` 문자열 숫자 처리 정책 명확화
   - 근거: `app/utils.py`의 `coerce_meeting_no_int`는 문자열 입력을 정수로 변환하지 않음

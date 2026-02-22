@@ -55,7 +55,12 @@ def execute_paginated_query(
             list_stmt,
             {**params, "limit": size, "offset": (page - 1) * size},
         ).mappings().all()
-        total = conn.execute(count_stmt, params).scalar() or 0
+        # 첫 페이지 결과가 page size보다 작으면 전체 건수는 rows 길이와 동일합니다.
+        # 이 경우 count query를 생략해 DB round-trip을 줄입니다.
+        if page == 1 and len(rows) < size:
+            total = len(rows)
+        else:
+            total = conn.execute(count_stmt, params).scalar() or 0
 
     return [dict(row) for row in rows], int(total)
 
