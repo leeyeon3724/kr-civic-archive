@@ -18,6 +18,9 @@
 | list API p95 latency | `docs/PERFORMANCE.md` 프로파일 기준 충족 | `scripts/benchmark_queries.py` | 성능 민감 변경 PR 필수 |
 | list API avg latency | profile + `BENCH_FAIL_THRESHOLD_MS` 기준 충족 | `scripts/benchmark_queries.py` | 성능 민감 변경 PR 필수 |
 | list API p95 ceiling | profile + `BENCH_FAIL_P95_THRESHOLD_MS` 기준 충족 | `scripts/benchmark_queries.py` | 성능 민감 변경 PR 필수 |
+| ingest latency p95 | ingest 경로 p95 지연이 운영 기준선 대비 급증하지 않음 | API logs, `docs/OPERATIONS.md` | 운영 모니터링 |
+| batch throughput | ingest 배치 처리량(건/분) 기준선 대비 급락 없음 | API logs, 운영 대시보드 | 운영 모니터링 |
+| list query count pattern | 목록 조회 요청당 DB query count 패턴 고정(주요 경로 N+1 회귀 금지) | benchmark/profile review | 성능 리뷰 필수 |
 
 ## Stability Metrics
 
@@ -33,8 +36,8 @@
 
 | Metric | Target | Source | Gate |
 |--------|--------|--------|------|
-| health live success | `/health/live` 200 유지 | `scripts/check_runtime_health.py` | 배포 전 필수 |
-| health ready success | 정상 모드 `/health/ready` 200, 장애 모드 `503(degraded)` 명시적 관리 | `scripts/check_runtime_health.py` | 배포 전 필수 |
+| health live success SLA | `/health/live` 성공율 SLA `>= 99.95%` | `scripts/check_runtime_health.py`, `docs/SLO.md` | 배포 전 필수 |
+| health ready success SLA | 정상 모드 `/health/ready` 성공율 SLA `>= 99.9%`, 장애 모드 `503(degraded)` 명시적 관리 | `scripts/check_runtime_health.py`, `docs/SLO.md` | 배포 전 필수 |
 | request trace completeness | 오류 응답에 `X-Request-Id` + `request_id` 유지, 장애 분석 시 요청 추적 완결성 보장 | 테스트/로그 | 보안/예외 회귀 테스트 |
 
 ## Maintainability Metrics
@@ -45,6 +48,7 @@
 | type check health | `mypy` 오류 0 | `scripts/check_mypy.py` | 기본 게이트 필수 |
 | docs-route consistency | API/ENV/BACKLOG/보안 정책 정합성 유지 | `scripts/check_docs_routes.py` | 기본 게이트 필수 |
 | schema policy safety | 런타임 수동 DDL 패턴 0 | `scripts/check_schema_policy.py` | 기본 게이트 필수 |
+| policy regression recovery time | 정책 스크립트 실패 감지 후 1 파이프라인 내 복구(회귀 탐지 시간 최소화) | 정책 스크립트 CI 이력 | PR/릴리스 회고 |
 
 ## Review Cadence
 

@@ -17,6 +17,9 @@ def test_validate_quality_metrics_content_accepts_minimal_valid_doc():
 ## Scope
 ## Performance Metrics
 p95
+ingest
+throughput
+query count
 ## Stability Metrics
 4xx
 5xx
@@ -24,10 +27,12 @@ mttr
 rate_limit_backend
 fallback
 ## Reliability Metrics
+sla
 /health/live
 /health/ready
 request_id
 ## Maintainability Metrics
+policy regression
 coverage
 mypy
 check_docs_routes.py
