@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import OrderedDict
 import logging
 import sys
 import time
@@ -21,10 +22,38 @@ REQUEST_LATENCY = Histogram(
     "HTTP request latency (seconds)",
     ["method", "path"],
 )
+PATH_LABEL_RESOLUTION_LATENCY = Histogram(
+    "civic_archive_metric_path_label_resolution_seconds",
+    "Metric path label resolution latency (seconds)",
+    ["strategy"],
+)
 ALLOWED_HTTP_METHOD_LABELS = {"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"}
 MAX_PATH_LABEL_LENGTH = 96
+ROUTE_TEMPLATE_CACHE_MAX_SIZE = 512
 
 logger = logging.getLogger("civic_archive.api")
+_ROUTE_TEMPLATE_CACHE: OrderedDict[tuple[str, str], str] = OrderedDict()
+
+
+def _route_cache_key(request: Request) -> tuple[str, str]:
+    raw_path = request.scope.get("path")
+    path = str(raw_path) if isinstance(raw_path, str) else request.url.path
+    return (_metric_method_label(request.method), path)
+
+
+def _route_template_cache_get(cache_key: tuple[str, str]) -> str | None:
+    route_path = _ROUTE_TEMPLATE_CACHE.get(cache_key)
+    if route_path is None:
+        return None
+    _ROUTE_TEMPLATE_CACHE.move_to_end(cache_key)
+    return route_path
+
+
+def _route_template_cache_set(cache_key: tuple[str, str], route_path: str) -> None:
+    _ROUTE_TEMPLATE_CACHE[cache_key] = route_path
+    _ROUTE_TEMPLATE_CACHE.move_to_end(cache_key)
+    while len(_ROUTE_TEMPLATE_CACHE) > ROUTE_TEMPLATE_CACHE_MAX_SIZE:
+        _ROUTE_TEMPLATE_CACHE.popitem(last=False)
 
 
 def _resolve_route_template_from_router(request: Request, api: FastAPI | None = None) -> str | None:
@@ -45,16 +74,21 @@ def _resolve_route_template_from_router(request: Request, api: FastAPI | None = 
     return None
 
 
-def _route_template(request: Request, api: FastAPI | None = None) -> str:
+def _route_template(request: Request, api: FastAPI | None = None) -> tuple[str, str]:
     route = request.scope.get("route")
     route_path = getattr(route, "path", None)
     if route_path:
-        return str(route_path)
+        return str(route_path), "scope"
 
+    cache_key = _route_cache_key(request)
+    cached = _route_template_cache_get(cache_key)
+    if cached is not None:
+        return cached, "cache"
     resolved = _resolve_route_template_from_router(request, api)
     if resolved:
-        return resolved
-    return "/_unmatched"
+        _route_template_cache_set(cache_key, resolved)
+        return resolved, "router"
+    return "/_unmatched", "fallback"
 
 
 def _metric_method_label(method: str | None) -> str:
@@ -64,11 +98,11 @@ def _metric_method_label(method: str | None) -> str:
     return "OTHER"
 
 
-def _metric_path_label(request: Request, api: FastAPI | None = None) -> str:
-    path = _route_template(request, api)
+def _metric_path_label(request: Request, api: FastAPI | None = None) -> tuple[str, str]:
+    path, strategy = _route_template(request, api)
     if len(path) > MAX_PATH_LABEL_LENGTH:
-        return "/_label_too_long"
-    return path
+        return "/_label_too_long", "label_too_long"
+    return path, strategy
 
 
 def _metric_status_label(status_code: int) -> str:
@@ -151,7 +185,11 @@ def register_observability(api: FastAPI) -> None:
             response = await call_next(request)
         finally:
             elapsed = time.perf_counter() - started
-            path = _metric_path_label(request, api)
+            path_resolution_started = time.perf_counter()
+            path, path_strategy = _metric_path_label(request, api)
+            PATH_LABEL_RESOLUTION_LATENCY.labels(path_strategy).observe(
+                time.perf_counter() - path_resolution_started
+            )
             current_exc = sys.exc_info()[1]
             if current_exc is not None:
                 status_code = 500
