@@ -37,8 +37,9 @@ logger = logging.getLogger("civic_archive.security")
 class InMemoryRateLimiter:
     """Fixed-window limiter keyed by client identity."""
 
-    def __init__(self, requests_per_minute: int) -> None:
+    def __init__(self, requests_per_minute: int, window_seconds: int = 60) -> None:
         self.requests_per_minute = max(0, requests_per_minute)
+        self.window_seconds = max(1, int(window_seconds))
         self._lock = threading.Lock()
         self._windows: dict[str, tuple[int, int]] = {}
 
@@ -50,7 +51,7 @@ class InMemoryRateLimiter:
         if not self.enabled:
             return True
 
-        now_window = int(time.time() // 60)
+        now_window = int(time.time() // self.window_seconds)
         with self._lock:
             prev_window, count = self._windows.get(key, (now_window, 0))
             if prev_window != now_window:
@@ -181,7 +182,10 @@ def build_rate_limiter(
             fail_open=config.RATE_LIMIT_FAIL_OPEN,
         )
     if config.rate_limit_backend == "memory":
-        return in_memory_rate_limiter_cls(config.RATE_LIMIT_PER_MINUTE)
+        return in_memory_rate_limiter_cls(
+            config.RATE_LIMIT_PER_MINUTE,
+            window_seconds=config.RATE_LIMIT_REDIS_WINDOW_SECONDS,
+        )
     raise RuntimeError("RATE_LIMIT_BACKEND must be one of: memory, redis.")
 
 

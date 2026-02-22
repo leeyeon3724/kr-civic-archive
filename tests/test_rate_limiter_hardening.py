@@ -112,3 +112,18 @@ def test_redis_rate_limiter_uses_configured_window_for_bucket(monkeypatch):
     assert limiter.allow("client-a") is True
     assert observed["redis_key"] == "test:1:client-a"
     assert observed["ttl"] == 70
+
+
+def test_in_memory_rate_limiter_uses_configured_window_seconds(monkeypatch):
+    timestamps = iter([12.0, 12.1, 20.0])
+
+    monkeypatch.setattr(security_rate_limit.time, "time", lambda: next(timestamps))
+
+    limiter = security_rate_limit.InMemoryRateLimiter(
+        requests_per_minute=1,
+        window_seconds=10,
+    )
+
+    assert limiter.allow("client-a") is True
+    assert limiter.allow("client-a") is False
+    assert limiter.allow("client-a") is True
