@@ -28,6 +28,10 @@ PATH_LABEL_RESOLUTION_LATENCY = Histogram(
     "Metric path label resolution latency (seconds)",
     ["strategy"],
 )
+DB_QUERY_DURATION = Histogram(
+    "civic_archive_db_query_duration_seconds",
+    "Database query execution duration (seconds)",
+)
 ALLOWED_HTTP_METHOD_LABELS = {"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"}
 MAX_PATH_LABEL_LENGTH = 96
 ROUTE_TEMPLATE_CACHE_MAX_SIZE = 512

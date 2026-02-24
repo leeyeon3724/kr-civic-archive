@@ -16,7 +16,7 @@ from app.bootstrap import (
     validate_startup_config,
 )
 from app.config import Config
-from app.database import init_db
+from app.database import init_db, instrumented_begin
 from app.logging_config import configure_logging
 from app.observability import register_observability
 from app.security import (
@@ -81,7 +81,7 @@ def create_app(app_config: Config | None = None) -> FastAPI:
     )
 
     def connection_provider() -> AbstractContextManager[Connection]:
-        return cast(AbstractContextManager[Connection], cast(object, db_engine.begin()))
+        return cast(AbstractContextManager[Connection], cast(object, instrumented_begin(db_engine)))
 
     api.state.db_engine = db_engine
     api.state.connection_provider = connection_provider

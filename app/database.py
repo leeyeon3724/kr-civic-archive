@@ -1,5 +1,35 @@
+import time as _time
+from contextlib import contextmanager
+from typing import Any, Generator
+
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
+
+
+class _InstrumentedConnection:
+    """Wraps a SQLAlchemy connection to record per-query latency."""
+
+    def __init__(self, conn: Any, histogram: Any) -> None:
+        self._conn = conn
+        self._histogram = histogram
+
+    def execute(self, *args: Any, **kwargs: Any) -> Any:
+        started = _time.perf_counter()
+        try:
+            return self._conn.execute(*args, **kwargs)
+        finally:
+            self._histogram.observe(_time.perf_counter() - started)
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._conn, name)
+
+
+@contextmanager
+def instrumented_begin(engine: Engine) -> Generator[Any, None, None]:
+    from app.observability import DB_QUERY_DURATION
+
+    with engine.begin() as conn:
+        yield _InstrumentedConnection(conn, DB_QUERY_DURATION)
 
 
 def init_db(
