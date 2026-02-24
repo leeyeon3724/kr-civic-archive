@@ -54,7 +54,7 @@ jobs:
         image: postgres:16
         env:
           POSTGRES_USER: app_user
-          POSTGRES_PASSWORD: ci_password
+          POSTGRES_PASSWORD: change_me
           POSTGRES_DB: civic_archive
         ports:
           - 5432:5432
@@ -67,7 +67,7 @@ jobs:
       POSTGRES_HOST: 127.0.0.1
       POSTGRES_PORT: 5432
       POSTGRES_USER: app_user
-      POSTGRES_PASSWORD: ci_password
+      POSTGRES_PASSWORD: change_me
       POSTGRES_DB: civic_archive
       RUN_INTEGRATION: "1"
     steps:
