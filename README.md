@@ -9,9 +9,6 @@ FastAPI + PostgreSQL 기반으로 뉴스, 회의록, 발언 단락 저장/검색
 # 1) 환경 변수 파일 준비
 cp .env.example .env
 
-# 파워셸
-Copy-Item .env.example .env
-
 # 2) 의존성 설치
 pip install -r requirements-dev.txt
 
@@ -25,16 +22,19 @@ python -m pytest
 uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-Docker 실행:
+Docker(개발):
 
 ```bash
-docker compose up --build
+cp .env.dev.example .env.dev
+docker compose --env-file .env.dev up --build
 ```
 
-운영 안전 기본값 Compose:
+Docker(운영, 단일 compose):
 
 ```bash
-docker compose -f docker-compose.prod.yml up --build -d
+cp .env.prod.example .env.prod
+# 필수 시크릿(API_KEY/JWT_SECRET/POSTGRES_PASSWORD) 설정 후 실행
+docker compose --env-file .env.prod up --build -d --scale api=3
 ```
 
 ## 환경 변수
@@ -83,7 +83,7 @@ python -m alembic downgrade -1
 ## 통합 테스트 (PostgreSQL)
 
 ```bash
-docker compose up -d db
+docker compose --env-file .env.dev up -d db
 python -m alembic upgrade head
 RUN_INTEGRATION=1 python -m pytest -m integration
 ```

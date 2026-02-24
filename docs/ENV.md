@@ -4,14 +4,20 @@
 
 ## 시작
 
-`.env.example`을 복사해 환경에 맞게 값을 설정합니다.
+로컬 Python 실행(`uvicorn`, `alembic`)은 `.env`를 사용합니다.
+Docker Compose 실행은 `--env-file`로 환경별 파일을 지정합니다.
 
 ```bash
-# 배시(Bash)
+# 로컬 앱/스크립트용(.env)
 cp .env.example .env
 
-# 파워셸(PowerShell)
-Copy-Item .env.example .env
+# Docker Compose 개발용
+cp .env.dev.example .env.dev
+docker compose --env-file .env.dev up --build
+
+# Docker Compose 운영용
+cp .env.prod.example .env.prod
+docker compose --env-file .env.prod up -d --build --scale api=3
 ```
 
 애플리케이션과 Alembic은 프로젝트 루트의 `.env`를 자동 로드합니다.
@@ -42,6 +48,19 @@ Copy-Item .env.example .env
 | `BOOTSTRAP_TABLES_ON_STARTUP` | `0` | 정책상 항상 `0` (수동 DDL 금지) |
 | `LOG_LEVEL` | `INFO` | 로그 레벨 |
 | `LOG_JSON` | `1` | JSON 구조화 로그 사용 여부 |
+
+## Compose 실행 변수
+
+| 변수 | 기본값 | 설명 |
+|------|--------|------|
+| `UVICORN_WORKERS` | `1` | 컨테이너 내부 Uvicorn worker 수 |
+| `API_PUBLISH_BIND` | `0.0.0.0` | 게이트웨이(host) bind IP |
+| `API_PUBLISH_PORT` | `8000` | 게이트웨이(host) 공개 포트 |
+| `DB_PUBLISH_BIND` | `127.0.0.1` | PostgreSQL(host) bind IP |
+| `DB_PUBLISH_PORT` | `5432` | PostgreSQL(host) 공개 포트 |
+| `REDIS_PUBLISH_BIND` | `127.0.0.1` | Redis(host) bind IP |
+| `REDIS_PUBLISH_PORT` | `6379` | Redis(host) 공개 포트 |
+| `REDIS_APPENDONLY` | `no` | Redis AOF 설정 (`yes`/`no`) |
 
 ## 보안 및 인증
 
@@ -77,7 +96,7 @@ openssl rand -base64 32
 python -c "import secrets; print(secrets.token_hex(32))"
 ```
 
-생성한 값을 `.env`에 설정합니다:
+생성한 값을 실행 환경 파일(`.env`, `.env.prod`)에 설정합니다:
 
 ```dotenv
 JWT_SECRET=<openssl rand -hex 32 결과>

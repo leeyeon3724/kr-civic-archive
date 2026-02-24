@@ -38,10 +38,14 @@ Conventional Commits를 사용합니다.
 python scripts/check_commit_messages.py --rev-range origin/main..HEAD --mode fail
 ```
 
-로컬 훅 설치(권장):
+로컬 훅 설치(선택):
 
 ```bash
-powershell -ExecutionPolicy Bypass -File scripts/install_git_hooks.ps1
+cat > .git/hooks/commit-msg <<'EOF'
+#!/usr/bin/env bash
+python scripts/check_commit_messages.py --message-file "$1"
+EOF
+chmod +x .git/hooks/commit-msg
 ```
 
 ## PR 작성 규칙
@@ -58,7 +62,6 @@ PR 본문에 아래 항목을 포함합니다.
 공통 게이트는 `docs/QUALITY_GATES.md`를 기준으로 실행합니다.
 문맥별 실행 순서(로컬/PR/릴리스/장애)는 `docs/GUARDRAILS.md`를 기준으로 적용합니다.
 
-- 필수: `python scripts/check_commit_messages.py --rev-range origin/main..HEAD --mode fail`
 - 필수: `docs/QUALITY_GATES.md`의 기본 게이트 전부 통과
 
 ## 변경 유형별 추가 요구사항

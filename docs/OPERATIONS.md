@@ -117,7 +117,9 @@
 
 프로덕션 compose 기준:
 
-- `docker compose -f docker-compose.prod.yml up -d --build`
+- `cp .env.prod.example .env.prod`
+- `.env.prod`에 시크릿/도메인 값을 채운 뒤:
+  - `docker compose --env-file .env.prod up -d --build --scale api=3`
 - 필수 시크릿/환경 변수:
   - `POSTGRES_PASSWORD`
   - `API_KEY`

@@ -17,3 +17,5 @@ coverage.xml
 
 # Local env files
 .env
+.env.dev
+.env.prod

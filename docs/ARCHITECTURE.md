@@ -9,7 +9,8 @@
 - Alembic
 - prometheus-client
 - Redis (선택: 분산 rate limit)
-- Docker / docker-compose
+- Docker Compose
+- HAProxy (compose gateway)
 - pytest
 
 ## 프로젝트 구조
@@ -77,9 +78,11 @@ scripts/
 ├── check_quality_metrics.py # 품질 지표 정책 문서 기준선 검사
 ├── check_runtime_health.py # 배포 전 liveness/readiness 가드 검사
 ├── check_version_consistency.py # APP_VERSION <-> app/__init__.py <-> CHANGELOG 정합성 검사
-└── install_git_hooks.ps1 # commit-msg 훅 설치 스크립트
 Dockerfile
 docker-compose.yml
+docker/
+└── haproxy/
+    └── haproxy.cfg      # gateway -> api 다중 인스턴스 라우팅
 tests/
 ├── test_integration_postgres.py # PostgreSQL 컨테이너 기반 통합 테스트
 ```
@@ -138,6 +141,7 @@ ASGI 엔트리포인트: `app.main:app`
 - 에러 표준화: `code/message/error/request_id/details` 단일 포맷
 - 관측성: request-id 미들웨어, 구조화 로그, `/metrics` 메트릭 (라우트 미매칭은 `/_unmatched`, 알 수 없는 HTTP method는 `OTHER` 라벨로 고정)
 - 보안 기본선: API key 선택적 강제(`REQUIRE_API_KEY`), JWT 인증/인가(`REQUIRE_JWT` + scope/role), IP rate-limit(`RATE_LIMIT_PER_MINUTE`)
+- Compose 배포 경계: 단일 `docker-compose.yml` + `--env-file(.env.dev/.env.prod)` + `gateway` 경유 공개 포트로 `api` 서비스 수평 확장(`--scale api=N`) 지원
 - 분산 rate-limit: `RATE_LIMIT_BACKEND=redis`, `REDIS_URL`로 멀티 인스턴스 환경 지원
 - Redis limiter 안정화: 장애 시 쿨다운(`RATE_LIMIT_REDIS_FAILURE_COOLDOWN_SECONDS`) + fallback(`RATE_LIMIT_FAIL_OPEN`) 지원
 - 프록시 신뢰 경계: `TRUSTED_PROXY_CIDRS`에 매치되는 원격 IP에서만 `X-Forwarded-For`를 신뢰
