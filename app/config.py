@@ -48,6 +48,7 @@ class Config(BaseSettings):
     JWT_SCOPE_WRITE: str = "archive:write"
     JWT_SCOPE_DELETE: str = "archive:delete"
     JWT_ADMIN_ROLE: str = "admin"
+    READ_CACHE_TTL_SECONDS: int = 0
     RATE_LIMIT_PER_MINUTE: int = 0
     RATE_LIMIT_BACKEND: str = "memory"
     REDIS_URL: str | None = None

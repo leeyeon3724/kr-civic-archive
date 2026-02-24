@@ -15,6 +15,7 @@ from app.bootstrap import (
     register_system_routes,
     validate_startup_config,
 )
+from app.cache import ReadCache
 from app.config import Config
 from app.database import init_db, instrumented_begin
 from app.logging_config import configure_logging
@@ -53,10 +54,13 @@ def create_app(app_config: Config | None = None) -> FastAPI:
             yield
         finally:
             db_engine = getattr(_api.state, "db_engine", None)
-            if db_engine is None or not hasattr(db_engine, "dispose"):
-                return
-            with suppress(Exception):
-                db_engine.dispose()
+            if db_engine is not None and hasattr(db_engine, "dispose"):
+                with suppress(Exception):
+                    db_engine.dispose()
+            read_cache = getattr(_api.state, "read_cache", None)
+            if read_cache is not None:
+                with suppress(Exception):
+                    read_cache.close()
 
     api = FastAPI(
         title="Civic Archive API",
@@ -85,6 +89,10 @@ def create_app(app_config: Config | None = None) -> FastAPI:
 
     api.state.db_engine = db_engine
     api.state.connection_provider = connection_provider
+    api.state.read_cache = ReadCache(
+        redis_url=app_config.REDIS_URL,
+        ttl_seconds=app_config.READ_CACHE_TTL_SECONDS,
+    )
 
     protected_dependencies: list[Any] = build_protected_dependencies(
         app_config,

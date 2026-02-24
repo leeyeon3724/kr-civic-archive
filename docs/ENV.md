@@ -89,6 +89,18 @@ API_KEY=<openssl rand -base64 32 결과>
 
 - `REQUIRE_API_KEY=1`과 `REQUIRE_JWT=1`을 동시에 사용하면 `/api/*` 인증은 AND 정책으로 동작하며 두 헤더를 모두 요구합니다.
 
+## 읽기 캐시 (Redis)
+
+| 변수 | 기본값 | 설명 |
+|------|--------|------|
+| `READ_CACHE_TTL_SECONDS` | `0` | 읽기 쿼리 결과 캐시 TTL(초). `0`이면 비활성화 |
+
+- `READ_CACHE_TTL_SECONDS > 0`이면 `REDIS_URL`도 함께 설정해야 합니다.
+  캐시는 TTL 만료 방식으로만 무효화됩니다(쓰기 시 자동 무효화 없음).
+  쓰기 빈도가 높은 환경에서는 낮은 TTL 값을 사용하십시오.
+- 캐시 키는 `civic_archive:read:<domain>:<파라미터>` 형식입니다.
+  도메인 단위 무효화(`invalidate_prefix`)가 필요하면 쓰기 핸들러에서 직접 호출합니다.
+
 ## 요청 제한 및 프록시
 
 | 변수 | 기본값 | 설명 |
