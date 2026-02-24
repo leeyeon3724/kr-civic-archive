@@ -16,7 +16,7 @@ if config.config_file_name is not None:
 
 target_metadata = None
 app_config = Config()
-config.set_main_option("sqlalchemy.url", app_config.database_url)
+config.set_main_option("sqlalchemy.url", app_config.database_engine_url)
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
