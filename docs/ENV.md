@@ -61,6 +61,32 @@ Copy-Item .env.example .env
 | `JWT_SCOPE_DELETE` | `archive:delete` | 삭제 권한 scope |
 | `JWT_ADMIN_ROLE` | `admin` | role 보유 시 scope 검사 우회 |
 
+### 보안 시크릿 생성
+
+`JWT_SECRET`와 `API_KEY`는 충분한 엔트로피가 보장된 값이어야 합니다.
+최소 32바이트(256비트) 이상의 무작위 값을 사용하십시오.
+
+```bash
+# JWT_SECRET 생성 (권장)
+openssl rand -hex 32
+
+# API_KEY 생성 (URL-safe Base64)
+openssl rand -base64 32
+
+# Python으로 생성
+python -c "import secrets; print(secrets.token_hex(32))"
+```
+
+생성한 값을 `.env`에 설정합니다:
+
+```dotenv
+JWT_SECRET=<openssl rand -hex 32 결과>
+API_KEY=<openssl rand -base64 32 결과>
+```
+
+> **주의**: 시크릿을 소스 코드나 버전 관리에 커밋하지 마십시오.
+> `.env`는 `.gitignore`에 포함되어야 합니다.
+
 - `REQUIRE_API_KEY=1`과 `REQUIRE_JWT=1`을 동시에 사용하면 `/api/*` 인증은 AND 정책으로 동작하며 두 헤더를 모두 요구합니다.
 
 ## 요청 제한 및 프록시

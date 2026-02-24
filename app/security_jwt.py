@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 import jwt
@@ -7,6 +8,8 @@ from jwt.exceptions import InvalidTokenError
 from jwt.types import Options
 
 from app.errors import http_error
+
+logger = logging.getLogger("civic_archive.security")
 
 
 def extract_values_set(claims: dict[str, Any], *keys: str) -> set[str]:
@@ -95,6 +98,15 @@ def authorize_claims_for_request(request: Any, claims: dict[str, Any], config: A
     admin_role = (config.JWT_ADMIN_ROLE or "").strip()
     role_values = extract_values_set(claims, "role", "roles")
     if admin_role and admin_role in role_values:
+        logger.info(
+            "admin_role_access_granted",
+            extra={
+                "sub": claims.get("sub"),
+                "method": request.method,
+                "path": str(request.url.path),
+                "admin_role": admin_role,
+            },
+        )
         return
 
     scope_values = extract_values_set(claims, "scope", "scopes")

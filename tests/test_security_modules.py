@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from types import SimpleNamespace
 
 import pytest
@@ -7,6 +8,7 @@ from fastapi import HTTPException
 from app import security_dependencies
 from app import security_proxy
 from app import security_rate_limit
+from app.security_jwt import authorize_claims_for_request
 
 
 def _rate_limit_config(**overrides):
@@ -196,3 +198,42 @@ def test_security_dependencies_jwt_dependency_uses_injected_jwt_handlers():
     assert seen["token"] == "token-abc"
     assert seen["method"] == "POST"
     assert request.state.auth_claims["sub"] == "user-1"
+
+
+def test_authorize_claims_logs_admin_role_bypass(caplog):
+    config = SimpleNamespace(
+        JWT_SCOPE_READ="archive:read",
+        JWT_SCOPE_WRITE="archive:write",
+        JWT_SCOPE_DELETE="archive:delete",
+        JWT_ADMIN_ROLE="admin",
+    )
+    request = SimpleNamespace(method="POST", url=SimpleNamespace(path="/api/news"))
+    claims = {"sub": "svc-account-1", "role": "admin", "scope": ""}
+
+    with caplog.at_level(logging.INFO, logger="civic_archive.security"):
+        authorize_claims_for_request(request, claims, config)
+
+    audit_records = [r for r in caplog.records if r.message == "admin_role_access_granted"]
+    assert len(audit_records) == 1
+    record = audit_records[0]
+    assert record.__dict__.get("sub") == "svc-account-1"
+    assert record.__dict__.get("admin_role") == "admin"
+    assert record.__dict__.get("method") == "POST"
+    assert record.__dict__.get("path") == "/api/news"
+
+
+def test_authorize_claims_does_not_log_for_normal_scope_grant(caplog):
+    config = SimpleNamespace(
+        JWT_SCOPE_READ="archive:read",
+        JWT_SCOPE_WRITE="archive:write",
+        JWT_SCOPE_DELETE="archive:delete",
+        JWT_ADMIN_ROLE="admin",
+    )
+    request = SimpleNamespace(method="POST", url=SimpleNamespace(path="/api/news"))
+    claims = {"sub": "regular-user", "scope": "archive:write"}
+
+    with caplog.at_level(logging.INFO, logger="civic_archive.security"):
+        authorize_claims_for_request(request, claims, config)
+
+    audit_records = [r for r in caplog.records if r.message == "admin_role_access_granted"]
+    assert len(audit_records) == 0
